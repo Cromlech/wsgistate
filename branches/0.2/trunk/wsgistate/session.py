@@ -25,13 +25,23 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
-
-import os, string, time, weakref, atexit, cgi, urlparse, md5, random, sys
+import os
+import string
+import time
+import weakref
+import atexit
+import cgi
+import urlparse
+import md5
+import random
+import sys
 from Cookie import SimpleCookie
 try:
     import threading
 except ImportError:
     import dummy_threading as threading
+
+__all__ = ['SessionService', 'SessionCache', 'Session', 'session']    
 
 def _shutdown(ref):
     cache = ref()
@@ -66,6 +76,12 @@ def _addclose(appiter, closefunc):
             return self
 
     return IterWrapper()
+
+def session(cache, **kw):
+    '''Decorator for sessions.'''
+    def decorator(application):
+        return Sessoion(self, application, cache, **kw)
+    return decorator
 
 
 class SessionCache(object):
@@ -329,7 +345,7 @@ class SessionService(object):
         return urlparse.urlunsplit(u)
 
 
-class SessionMiddleware(object):
+class Session(object):
 
     '''WSGI middleware that adds a session service. A SessionService instance
     is passed to the application in environ['com.saddi.service.session'].
@@ -337,14 +353,14 @@ class SessionMiddleware(object):
     instantiated with every call to the application.)
     '''
 
-    def __init__(self, cache, application, **kw):
+    def __init__(self, application, cache, **kw):
         self._cache, self._application = cache, application
         self._sessionkey = kw.get('sessionkey', 'com.saddi.service.session')
         self._kw = kw
 
     def __call__(self, environ, start_response):
         service = SessionService(self._cache, environ, **self._kw)
-        environ[self._sessionkey] = service        
+        environ[self._sessionkey] = service
         def my_start_response(status, headers, exc_info=None):
             service.setcookie(headers)
             return start_response(status, headers, exc_info)
@@ -357,6 +373,3 @@ class SessionMiddleware(object):
         # is a generator. (In which case, we may not know that a Session
         # has been checked out until completion of the first iteration.)
         return _addclose(result, service.close)
-
-
-__all__ = ['Session', 'SessionCache', 'SessionMiddleware']
