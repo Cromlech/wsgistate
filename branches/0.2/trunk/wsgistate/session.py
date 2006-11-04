@@ -227,7 +227,7 @@ class SessionService(object):
     _expiredid = 'expired session'
 
     def __init__(self, cache, environ, **kw):
-        self._cache, self._cookiename, self._fieldname = cache, cname, fname
+        self._cache = cache
         self._cookiename = kw.get('cookiename', '_SID_')
         self._fieldname = kw.get('fieldname', '_SID_')
         self._path = kw.get('path', '/')
@@ -354,18 +354,19 @@ class Session(object):
     '''
 
     def __init__(self, application, cache, **kw):
-        self._cache, self._application = cache, application
+        self._application, self._cache = application, cache 
         self._sessionkey = kw.get('sessionkey', 'com.saddi.service.session')
         self._kw = kw
 
     def __call__(self, environ, start_response):
         service = SessionService(self._cache, environ, **self._kw)
         environ[self._sessionkey] = service
+        result = None
         def my_start_response(status, headers, exc_info=None):
             service.setcookie(headers)
             return start_response(status, headers, exc_info)
         try:
-            result = self._application(environ, my_start_response)
+            return self._application(environ, my_start_response)
         except:
             # If anything goes wrong, ensure the session is checked back in.
             service.close()

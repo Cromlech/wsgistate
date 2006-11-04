@@ -28,8 +28,97 @@
 
 '''WSGI middleware for caching.'''
 
-import cgi, marshal
+import cgi
+import marshal
+import time
+import rfc822
 
+__all__ = ['WsgiCache', 'cache']
+
+def cache(cache, **kw):
+    '''Decorator for simple cache.'''
+    def decorator(application):
+        return WsgiCache(application, cache, **kw)
+    return decorator
+
+def control(application, value):
+    headers = [('Cache-Control', value)]
+    return CacheHeader(application, headers)
+
+def expire(application, value):
+    now = rfc822.formatdate()
+    headers = [('Cache-Control', value), ('Date', now), ('Expires', now)]
+    return CacheHeader(application, headers)
+
+def age(value, seconds):
+    now = time.time()
+    headers = [('Cache-Control', value % seconds), ('Date', rfc822.formatdate(now)),
+        ('Expires', rfc822.formatdate(now + seconds))]
+    def decorator(application):
+        return CacheHeader(application, headers)
+    return decorator
+
+def public(application):
+    return control(application, 'public')
+    
+def private(application):
+    return expire(application, 'private')
+    
+def nocache(application):
+    now = rfc822.formatdate()
+    headers = [('Cache-Control', 'no-cache'), ('Pragma', 'no-cache'),
+        ('Date', now), ('Expires', now)]
+    return CacheHeader(application, headers)
+
+def nostore(application):
+    return expire(application, 'no-store')
+
+def notransform(application):
+    return control(application, 'no-transform')
+
+def mustrevalidate(application):
+    return control(application, 'must-revalidate')
+
+def proxyrevalidate(application):
+    return control(application, 'proxy-revalidate')
+
+def maxage(seconds):
+    return age('max-age=%d', seconds)
+
+def smaxage(seconds):
+    return age('s-maxage=%d', seconds)
+
+def expires(seconds):
+    headers = [('Expires', rfc822.formatdate(time.time() + seconds))]
+    return CacheHeader(application, headers)
+
+def vary(headers):
+    headers = [('Vary', ', '.join(headers))]
+    def decorator(application):
+        return CacheHeader(application, headers)
+    return decorator
+
+def modified(time=None):
+    headers = [('Modified', rfc822.formatdate(time))]
+    return CacheHeader(application, headers)
+
+
+class CacheHeader(object):
+
+    '''Controls HTTP Caching headers.'''
+
+    def __init__(self, application, headers):
+        self.application = application
+        self.headers = headers
+        
+    def __call__(self, environ, start_response):
+        if environ.get('REQUEST_METHOD').upper() in ('GET', 'HEAD'):
+            def hdr_response(status, headers, exc_info=None):
+                headers.extend(self.headers)
+                return start_response(status, headers, exc_info)
+            return self.application(environ, hdr_response)
+        return self.application(environ, start_response)
+        
 
 class WsgiCache(object):
 
@@ -98,13 +187,3 @@ class _CacheResponse(object):
         cachedict = dict((('status', status), ('headers', headers), ('exc_info', exc_info)))
         self._cache.set(self._key, cachedict)
         return self._start_response(status, headers, exc_info)
-
-
-def cache(cache, **kw):
-    '''Decorator for simple cache.'''
-    def decorator(application):
-        return WsgiCache(application, cache, **kw)
-    return decorator
-
-
-__all__ = ['WsgiCache', 'cache']   
