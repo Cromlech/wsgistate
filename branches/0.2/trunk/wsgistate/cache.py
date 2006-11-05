@@ -160,15 +160,15 @@ class WsgiCache(object):
         
     def __call__(self, environ, start_response):
         key = self._keygen(environ)
-        cached = self._cache.get(key)
+        info = self._cache.get(key)
         # Cache if data uncached
         if cached is not None:
-            start_response(cached['status'], cached['headers'], cached['exc_info'])
-            return cached['data']
+            start_response(info['status'], info['headers'], info['exc_info'])
+            return info['data']
         if self._cacheable(environ):
             def cache_response(self, status, headers, exc_info=None):
-                expirehead = expiredate(self._cache.default_timeout, 's-maxage=%d')
-                headers.extend(expirehead)
+                expirehdrs = expiredate(self._cache.timeout, 's-maxage=%d')
+                headers.extend(expirehdrs)
                 cachedict = dict((('status', status), ('headers', headers),
                     ('exc_info', exc_info)))
                 self._cache.set(key, cachedict)
