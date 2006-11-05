@@ -47,40 +47,10 @@ def _shutdown(ref):
     cache = ref()
     if cache is not None: cache.shutdown()
     
-def _addclose(appiter, closefunc):
-    '''
-    Wraps an iterator so that its close() method calls closefunc. Respects
-    the existence of __len__ and the iterator's own close() method.
-
-    Need to use metaclass magic because __len__ and next are not
-    recognized unless they're part of the class. (Can't assign at
-    __init__ time.)
-    '''
-
-    class MetaIterWrapper(type):
-        def __init__(cls, name, bases, clsdict):
-            super(MetaIterWrapper, cls).__init__(name, bases, clsdict)
-            if hasattr(appiter, '__len__'): cls.__len__ = appiter.__len__
-            cls.next = iter(appiter).next
-            if hasattr(appiter, 'close'):
-                def _close(self):
-                    appiter.close()
-                    closefunc()
-                cls.close = _close
-            else:
-                cls.close = closefunc
-
-    class IterWrapper(object):
-        __metaclass__ = MetaIterWrapper
-        def __iter__(self):
-            return self
-
-    return IterWrapper()
-
 def session(cache, **kw):
     '''Decorator for sessions.'''
     def decorator(application):
-        return Sessoion(self, application, cache, **kw)
+        return Session(self, application, cache, **kw)
     return decorator
 
 
@@ -124,7 +94,7 @@ class SessionCache(object):
         self._lock.acquire()
         try:
             sid, sess = self.newid(), dict()
-            self._cache.set(sid, sess)                
+            self._cache.set(sid, sess)
             assert sid not in self._checkedout            
             self._checkedout[sid] = sess
             return sid, sess
@@ -361,16 +331,12 @@ class Session(object):
     def __call__(self, environ, start_response):
         service = SessionService(self._cache, environ, **self._kw)
         environ[self._sessionkey] = service
-        result = None
         def my_start_response(status, headers, exc_info=None):
             service.setcookie(headers)
+            service.close()
             return start_response(status, headers, exc_info)
         try:
             return self._application(environ, my_start_response)
         except:
             # If anything goes wrong, ensure the session is checked back in.
             service.close()
-        # The iterator must be unconditionally wrapped, just in case it
-        # is a generator. (In which case, we may not know that a Session
-        # has been checked out until completion of the first iteration.)
-        return _addclose(result, service.close)
