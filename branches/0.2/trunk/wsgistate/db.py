@@ -34,6 +34,8 @@ from datetime import datetime
 from sqlalchemy import *
 from base import BaseCache
 
+__all__ = ['DbCache']
+
 
 class DbCache(BaseCache):     
 
@@ -79,7 +81,7 @@ class DbCache(BaseCache):
         @param value Value to be inserted in cache.        
         '''
         
-        timeout = self.default_timeout
+        timeout = self.timeout
         # Get count
         num = self._cache.count().execute().fetchone()[0]
         if num > self._max_entries: self._cull()
@@ -106,6 +108,3 @@ class DbCache(BaseCache):
         '''Remove items in cache that have timed out.'''
         now = datetime.now().replace(microsecond=0)
         self._cache.delete(self._cache.c.expires < now).execute()
-        
-
-__all__ = ['DbCache']

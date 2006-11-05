@@ -30,6 +30,8 @@
 
 '''Base Cache class.'''
 
+__all__ = ['BaseCache']
+
 
 class BaseCache(object):
 
@@ -43,7 +45,7 @@ class BaseCache(object):
             timeout = int(timeout)
         except (ValueError, TypeError):
             timeout = 300
-        self.default_timeout = timeout
+        self.timeout = timeout
 
     def __getitem__(self, key):
         '''Fetch a given key from the cache.'''

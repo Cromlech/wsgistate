@@ -32,6 +32,8 @@
 import time
 from base import BaseCache
 
+__all__ = ['SimpleCache']
+
 
 class SimpleCache(BaseCache):
 
@@ -74,7 +76,7 @@ class SimpleCache(BaseCache):
         if len(self._cache) >= self._max_entries: self._cull()
         self._cache[key] = value
         # Set timeout
-        self._expire_info[key] = time.time() + self.default_timeout
+        self._expire_info[key] = time.time() + self.timeout
 
     def delete(self, key):
         '''Delete a key from the cache, failing silently.
@@ -93,6 +95,3 @@ class SimpleCache(BaseCache):
         now = time.time()
         for key, exp in self._expire_info.iteritems():
             if exp < now: self.delete(key)
-
-
-__all__ = ['SimpleCache']

@@ -36,6 +36,8 @@ except ImportError:
     import pickle
 from simple import SimpleCache
 
+__all__ = ['FileCache']
+
 
 class FileCache(SimpleCache):
 
@@ -129,11 +131,9 @@ class FileCache(SimpleCache):
         try:
             os.makedirs(self._dir)
         except OSError:
-            raise EnvironmentError("Cache directory '%s' does not exist and could not be created'" % self._dir)
+            raise EnvironmentError('Cache directory "%s" does not exist and ' \
+                'could not be created' % self._dir)
 
     def _key_to_file(self, key):
         '''Gives the filesystem path for a key.'''
         return os.path.join(self._dir, urllib.quote_plus(key))
-
-
-__all__ = ['FileCache']

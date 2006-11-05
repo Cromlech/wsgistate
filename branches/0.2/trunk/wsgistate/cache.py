@@ -36,44 +36,67 @@ import rfc822
 __all__ = ['WsgiCache', 'cache']
 
 def cache(cache, **kw):
-    '''Decorator for simple cache.'''
+    '''Decorator for caching.'''
     def decorator(application):
         return WsgiCache(application, cache, **kw)
     return decorator
 
+def expiredate(value, seconds):
+    now = time.time()
+    return [('Cache-Control', value % seconds),
+        ('Date', rfc822.formatdate(now)),
+        ('Expires', rfc822.formatdate(now + seconds))]
+
 def control(application, value):
+    '''Generic setter for 'Cache-Control' headers.
+
+    @param application WSGI application
+    @param value 'Cache-Control' value
+    '''
     headers = [('Cache-Control', value)]
     return CacheHeader(application, headers)
 
 def expire(application, value):
+    '''Generic setter for 'Cache-Control' headers + expiration info.
+
+    @param application WSGI application
+    @param value 'Cache-Control' value
+    '''    
     now = rfc822.formatdate()
     headers = [('Cache-Control', value), ('Date', now), ('Expires', now)]
     return CacheHeader(application, headers)
 
 def age(value, seconds):
-    now = time.time()
-    headers = [('Cache-Control', value % seconds), ('Date', rfc822.formatdate(now)),
-        ('Expires', rfc822.formatdate(now + seconds))]
+    '''Generic setter for 'Cache-Control' headers + future expiration info.
+
+    @param value 'Cache-Control' value
+    @param seconds # of seconds a resource should be considered invalid in   
+    '''
     def decorator(application):
-        return CacheHeader(application, headers)
+        return CacheHeader(application, expiredate(value, seconds))
     return decorator
 
 def public(application):
+    '''Sets caching to 'public'.'''
     return control(application, 'public')
     
 def private(application):
+    '''Sets caching to 'private'.'''
     return expire(application, 'private')
     
 def nocache(application):
+    '''Sets caching to 'no-cache'.'''
     now = rfc822.formatdate()
     headers = [('Cache-Control', 'no-cache'), ('Pragma', 'no-cache'),
         ('Date', now), ('Expires', now)]
     return CacheHeader(application, headers)
 
 def nostore(application):
+    '''Turns off caching.'''
     return expire(application, 'no-store')
 
 def notransform(application):
+    ''''''
     return control(application, 'no-transform')
 
 def mustrevalidate(application):
@@ -122,48 +145,49 @@ class CacheHeader(object):
 
 class WsgiCache(object):
 
-    '''WSGI middleware for caching.'''  
+    '''WSGI middleware for response caching.'''  
 
     def __init__(self, app, cache, **kw):
-        '''Init method.'''
-        super(WsgiCache, self).__init__()
         self.application, self._cache = app, cache
         # Adds method to cache key
         self._methidx = kw.get('index_methods', False)
-        # Adds user submitted data (GET, POST) to cache key
+        # Adds user submitted data to cache key
         self._useridx = kw.get('index_user_info', False)
         # Which HTTP responses by method are cached
-        self._allowed = kw.get('allowed_methods', set(['GET', 'HEAD']))
-        # Responses to user submitted data (GET, POST) is cached
+        self._allowed = kw.get('allowed_methods', ('GET', 'HEAD'))
+        # Responses to user submitted data is cached
         self._usersub = kw.get('cache_user_info', False)
         
     def __call__(self, environ, start_response):
-        '''Caches responses to HTTP requests.'''
         key = self._keygen(environ)
-        cached = self._cache.get(key)      
-        # Cache if data not cached
-        try:
-            data = cached['data']
+        cached = self._cache.get(key)
+        # Cache if data uncached
+        if cached is not None:
             start_response(cached['status'], cached['headers'], cached['exc_info'])
-        except TypeError:
-            if self._cacheable(environ):                
-                sr = _CacheResponse(start_response, key, self._cache)
-                data = self.application(environ, sr.cache_start_response)
-                self._cache[key]['data'] = data
-            else:
-                data = self.application(environ, start_response)                
-        return data
+            return cached['data']
+        if self._cacheable(environ):
+            def cache_response(self, status, headers, exc_info=None):
+                expirehead = expiredate(self._cache.default_timeout, 's-maxage=%d')
+                headers.extend(expirehead)
+                cachedict = dict((('status', status), ('headers', headers),
+                    ('exc_info', exc_info)))
+                self._cache.set(key, cachedict)
+                return start_response(status, headers, exc_info) 
+            data = self.application(environ, cache_response)
+            self._cache[key]['data'] = data
+            return data
+        return self.application(environ, start_response)
 
     def _keygen(self, environ):
         '''Generates cache keys.'''
-        # Base of key is alwasy path of request
+        # Base of key is always path of request
         key = environ['PATH_INFO']
         # Add method name to key if configured that way
-        if self._methidx: key = ''.join([key, environ['REQUEST_METHOD']])
+        if self._methidx: key += environ['REQUEST_METHOD']
         # Add marshalled user submitted data to string if configured that way
         if self._useridx:
             qdict = cgi.parse(environ['wsgi.input'], environ, False, False)
-            key = ''.join([key, marshal.dumps(qdict)])
+            key += marshal.dumps(qdict)
         return key
     
     def _cacheable(self, environ):
@@ -172,18 +196,6 @@ class WsgiCache(object):
         if environ['REQUEST_METHOD'] not in self._allowed: return False
         # Returns false if requests based on user submissions are not to be cached
         if self._usersub:
-            if 'QUERY_STRING' in environ: return False
-            if environ['REQUEST_METHOD'] == 'POST': return False
+            if 'QUERY_STRING' in environ or environ['REQUEST_METHOD'] == 'POST':
+                return False
         return True
-
-
-class _CacheResponse(object):
-
-    def __init__(self, start_response, key, cache):
-        self._start_response = start_response
-        self._cache, self._key = cache, key
-
-    def cache_start_response(self, status, headers, exc_info=None):
-        cachedict = dict((('status', status), ('headers', headers), ('exc_info', exc_info)))
-        self._cache.set(self._key, cachedict)
-        return self._start_response(status, headers, exc_info)

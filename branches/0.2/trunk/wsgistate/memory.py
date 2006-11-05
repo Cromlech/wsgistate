@@ -37,6 +37,7 @@ except ImportError:
     import dummy_threading as threading
 from simple import SimpleCache
 
+__all__ = ['MemoryCache']
 
 class MemoryCache(SimpleCache):
 
@@ -90,6 +91,3 @@ class MemoryCache(SimpleCache):
             super(MemoryCache, self).delete(key)
         finally:
             self._lock.release()
-        
-
-__all__ = ['MemoryCache']

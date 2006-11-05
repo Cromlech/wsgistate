@@ -35,6 +35,8 @@ except ImportError:
     raise ImportError("Memcached cache backend requires the 'memcache' library")
 from base import BaseCache
 
+__all__ = ['MemCached']
+
 
 class MemCached(BaseCache):
 
@@ -63,7 +65,7 @@ class MemCached(BaseCache):
         @param key Keyword of item in cache.
         @param value Value to be inserted in cache.        
         '''
-        self._cache.set(key, value, self.default_timeout)
+        self._cache.set(key, value, self.timeout)
 
     def delete(self, key):
         '''Delete a key from the cache, failing silently.
@@ -85,6 +87,3 @@ class MemCached(BaseCache):
     def _cull(self):
         '''Stub.'''
         pass
-       
-
-__all__ = ['MemCached']
