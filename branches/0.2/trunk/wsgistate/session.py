@@ -42,7 +42,7 @@ try:
 except ImportError:
     import dummy_threading as threading
 
-__all__ = ['SessionService', 'SessionCache', 'Session', 'session', 'urlsession']    
+__all__ = ['SessionCache', 'Session', 'session', 'urlsession']
 
 def _shutdown(ref):
     cache = ref()
@@ -63,7 +63,7 @@ def urlsession(cache, **kw):
 
 class SessionCache(object):
     
-    '''Base class for session stores. You first acquire a session by
+    '''Base class for session cache. You first acquire a session by
     calling create() or checkout(). After using the session, you must call
     checkin(). You must not keep references to sessions outside of a check
     in/check out block. Always obtain a fresh reference.
@@ -73,8 +73,8 @@ class SessionCache(object):
     length = 64
 
     def __init__(self, cache, **kw):
-        self._lock = threading.Condition()
-        self._checkedout, self._closed, self._cache = dict(), False, cache
+        self.lock = threading.Condition()
+        self.checkedout, self._closed, self.cache = dict(), False, cache
         # Sets if session id is random on every access or not
         self._random = kw.get('random', False)
         self._secret = ''.join(self.idchars[ord(c) % len(self.idchars)]
@@ -93,16 +93,14 @@ class SessionCache(object):
         The newly-created session should eventually be released by
         a call to checkin().            
         '''
-        assert not self._closed
-        self._lock.acquire()
+        self.lock.acquire()
         try:
-            sid, sess = self.newid(), dict()
-            self._cache.set(sid, sess)
-            assert sid not in self._checkedout            
-            self._checkedout[sid] = sess
-            return sid, sess
+            sid, session = self.newid(), dict()
+            self.cache.set(sid, session)            
+            self.checkedout[sid] = session
+            return sid, session
         finally:
-            self._lock.release()
+            self.lock.release()
 
     def checkout(self, sid):
         '''Checks out a session for use. Returns the session if it exists,
@@ -113,25 +111,22 @@ class SessionCache(object):
 
         @param sid Session id        
         '''
-        assert not self._closed
-        self._lock.acquire()
+        self.lock.acquire()
         try:
             # If we know it's already checked out, block.
-            while sid in self._checkedout: self._lock.wait()
-            sess = self._cache.get(sid)
-            if sess is not None:
-                assert sid not in self._checkedout
+            while sid in self.checkedout: self.lock.wait()
+            session = self.cache.get(sid)
+            if session is not None:
                 # Randomize session id if set and remove old session id
                 if self._random:
-                    self._cache.delete(sid)
+                    self.cache.delete(sid)
                     sid = self.newid()
                 # Put in checkout
-                self._checkedout[sid] = sess
-                return sid, sess
-            else:
-                return None, None
+                self.checkedout[sid] = session
+                return sid, session
+            return None, None
         finally:
-            self._lock.release()
+            self.lock.release()
 
     def checkin(self, sid, session):
         '''Returns the session for use by other threads/processes.
@@ -139,30 +134,27 @@ class SessionCache(object):
         @param sid Session id
         @param session Session dictionary
         '''
-        assert not self._closed
-        if session is None: return
-        self._lock.acquire()
+        self.lock.acquire()
         try:
-            assert sid in self._checkedout
-            del self._checkedout[sid]
-            self._cache.set(sid, session)
-            self._lock.notify()
+            del self.checkedout[sid]
+            self.cache.set(sid, session)
+            self.lock.notify()
         finally:            
-            self._lock.release()
+            self.lock.release()
 
     def shutdown(self):
         '''Clean up outstanding sessions.'''
-        self._lock.acquire()
+        self.lock.acquire()
         try:
             if not self._closed:
                 # Save or delete any sessions that are still out there.                
-                for sid, sess in self._checkedout.iteritems():
-                    self._cache.set(sid, session)
-                self._cache._cull()
-                self._checkedout.clear()
+                for sid, session in self.checkedout.iteritems():
+                    self.cache.set(sid, session)
+                self.cache._cull()
+                self.checkedout.clear()
                 self._closed = True
         finally:
-            self._lock.release()
+            self.lock.release()
 
     # Utilities
 
@@ -172,7 +164,7 @@ class SessionCache(object):
         for num in xrange(10000):
             sid = sha.new(str(random.randint(0, sys.maxint - 1)) +
                 str(random.randint(0, sys.maxint - 1)) + self._secret).hexdigest()
-            if sid not in self._cache: break
+            if sid not in self.cache: break
         return sid
             
 
