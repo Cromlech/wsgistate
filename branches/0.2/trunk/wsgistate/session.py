@@ -27,7 +27,6 @@
 
 import os
 import string
-import time
 import weakref
 import atexit
 import cgi
@@ -147,7 +146,7 @@ class SessionCache(object):
         self.lock.acquire()
         try:
             if not self._closed:
-                # Save or delete any sessions that are still out there.                
+                # Save or delete any sessions that are still out there.
                 for sid, session in self.checkedout.iteritems():
                     self.cache.set(sid, session)
                 self.cache._cull()
