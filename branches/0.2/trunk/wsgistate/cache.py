@@ -35,17 +35,16 @@ import rfc822
 
 __all__ = ['WsgiCache', 'cache']
 
+def expiredate(value, seconds):
+    now = time.time()
+    return {'Cache-Control':value % seconds, 'Date':rfc822.formatdate(now),
+        'Expires':rfc822.formatdate(now + seconds)}
+
 def cache(cache, **kw):
     '''Decorator for caching.'''
     def decorator(application):
         return WsgiCache(application, cache, **kw)
     return decorator
-
-def expiredate(value, seconds):
-    now = time.time()
-    return [('Cache-Control', value % seconds),
-        ('Date', rfc822.formatdate(now)),
-        ('Expires', rfc822.formatdate(now + seconds))]
 
 def control(application, value):
     '''Generic setter for 'Cache-Control' headers.
@@ -53,7 +52,7 @@ def control(application, value):
     @param application WSGI application
     @param value 'Cache-Control' value
     '''
-    headers = [('Cache-Control', value)]
+    headers = {'Cache-Control':value}
     return CacheHeader(application, headers)
 
 def expire(application, value):
@@ -63,7 +62,7 @@ def expire(application, value):
     @param value 'Cache-Control' value
     '''    
     now = rfc822.formatdate()
-    headers = [('Cache-Control', value), ('Date', now), ('Expires', now)]
+    headers = {'Cache-Control':value, 'Date':now, 'Expires':now}
     return CacheHeader(application, headers)
 
 def age(value, seconds):
@@ -77,52 +76,62 @@ def age(value, seconds):
     return decorator
 
 def public(application):
-    '''Sets caching to 'public'.'''
+    '''Response MAY be cached.'''
     return control(application, 'public')
     
 def private(application):
-    '''Sets caching to 'private'.'''
+    '''Response intended for 1 user that MUST NOT be cached.'''
     return expire(application, 'private')
     
 def nocache(application):
-    '''Sets caching to 'no-cache'.'''
+    '''Response that a cache can't send without origin server revalidation.'''
     now = rfc822.formatdate()
-    headers = [('Cache-Control', 'no-cache'), ('Pragma', 'no-cache'),
-        ('Date', now), ('Expires', now)]
+    headers = {'Cache-Control':'no-cache', 'Pragma':'no-cache', 'Date':now,
+        'Expires':now}
     return CacheHeader(application, headers)
 
 def nostore(application):
-    '''Turns off caching.'''
+    '''Response that MUST NOT be cached.'''
     return expire(application, 'no-store')
 
 def notransform(application):
-    ''''''
+    '''A cache must not modify the Content-Location, Content-MD5, ETag,
+    Last-Modified, Expires, Content-Encoding, Content-Range, and Content-Type
+    headers.
+    '''
     return control(application, 'no-transform')
 
-def mustrevalidate(application):
+def revalidate(application):
+    '''A cache must revalidate a response with the origin server.'''
     return control(application, 'must-revalidate')
 
 def proxyrevalidate(application):
+    '''Shared caches must revalidate a response with the origin server.'''
     return control(application, 'proxy-revalidate')
 
 def maxage(seconds):
+    '''Sets the maximum time in seconds a response can be cached.'''
     return age('max-age=%d', seconds)
 
 def smaxage(seconds):
+    '''Sets the maximum time in seconds a shared cache can store a response.''' 
     return age('s-maxage=%d', seconds)
 
 def expires(seconds):
-    headers = [('Expires', rfc822.formatdate(time.time() + seconds))]
+    '''Sets the time a response expires from the cache (HTTP 1.0).'''
+    headers = {'Expires':rfc822.formatdate(time.time() + seconds)}
     return CacheHeader(application, headers)
 
 def vary(headers):
-    headers = [('Vary', ', '.join(headers))]
+    '''Sets which fields allow a cache to use a response without revalidation.'''
+    headers = {'Vary':', '.join(headers)}
     def decorator(application):
         return CacheHeader(application, headers)
     return decorator
 
 def modified(time=None):
-    headers = [('Modified', rfc822.formatdate(time))]
+    '''Sets the time a response was modified.'''
+    headers = {'Modified':rfc822.formatdate(time)}
     return CacheHeader(application, headers)
 
 
@@ -136,8 +145,18 @@ class CacheHeader(object):
         
     def __call__(self, environ, start_response):
         if environ.get('REQUEST_METHOD').upper() in ('GET', 'HEAD'):
+            
             def hdr_response(status, headers, exc_info=None):
-                headers.extend(self.headers)
+                if 'Cache-Control' in self.headers:
+                    print self.headers
+                    for idx, i in enumerate(headers):
+                        if i[0] == 'Cache-Control':
+                            curval = self.headers.pop('Cache-Control')
+                            newval = ', '.join([i[1], curval])
+                            headers.append(('Cache-Control', newval))
+                            del headers[idx]
+                            break                    
+                headers.extend((k, v) for k, v in self.headers.iteritems())
                 return start_response(status, headers, exc_info)
             return self.application(environ, hdr_response)
         return self.application(environ, start_response)

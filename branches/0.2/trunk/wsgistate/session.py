@@ -32,16 +32,17 @@ import weakref
 import atexit
 import cgi
 import urlparse
-import md5
+import sha
 import random
 import sys
 from Cookie import SimpleCookie
+from urllib import quote
 try:
     import threading
 except ImportError:
     import dummy_threading as threading
 
-__all__ = ['SessionService', 'SessionCache', 'Session', 'session']    
+__all__ = ['SessionService', 'SessionCache', 'Session', 'session', 'urlsession']    
 
 def _shutdown(ref):
     cache = ref()
@@ -50,26 +51,29 @@ def _shutdown(ref):
 def session(cache, **kw):
     '''Decorator for sessions.'''
     def decorator(application):
-        return Session(self, application, cache, **kw)
+        return Session(application, cache, **kw)
     return decorator
+
+def urlsession(cache, **kw):
+    '''Decorator for URL encoded sessions.'''
+    def decorator(application):
+        return URLSession(application, cache, **kw)
+    return decorator
+
 
 
 class SessionCache(object):
     
-    '''Abstract base class for session stores. You first acquire a session by
-    calling create() or checkout(). After using the session,
-    you must call checkin(). You must not keep references to sessions
-    outside of a check in/check out block. Always obtain a fresh reference.
-
-    After timeout minutes of inactivity, sessions are deleted.
+    '''Base class for session stores. You first acquire a session by
+    calling create() or checkout(). After using the session, you must call
+    checkin(). You must not keep references to sessions outside of a check
+    in/check out block. Always obtain a fresh reference.
     '''
-    
     # Would be nice if len(idchars) were some power of 2.
     idchars = '-_'.join([string.digits, string.ascii_letters])  
-    length = 32
+    length = 64
 
     def __init__(self, cache, **kw):
-        super(SessionCache, self).__init__()
         self._lock = threading.Condition()
         self._checkedout, self._closed, self._cache = dict(), False, cache
         # Sets if session id is random on every access or not
@@ -80,7 +84,7 @@ class SessionCache(object):
         atexit.register(_shutdown, weakref.ref(self))
 
     def __del__(self):
-        self.shutdown()        
+        self.shutdown()
 
     # Public interface.
 
@@ -155,7 +159,7 @@ class SessionCache(object):
                 # Save or delete any sessions that are still out there.                
                 for sid, sess in self._checkedout.iteritems():
                     self._cache.set(sid, session)
-                self._cache._cull()                
+                self._cache._cull()
                 self._checkedout.clear()
                 self._closed = True
         finally:
@@ -167,13 +171,11 @@ class SessionCache(object):
         "Returns session key that isn't being used."
         sid = None
         for num in xrange(10000):
-            sid = md5.new(str(random.randint(0, sys.maxint - 1)) +
+            sid = sha.new(str(random.randint(0, sys.maxint - 1)) +
                 str(random.randint(0, sys.maxint - 1)) + self._secret).hexdigest()
             if sid not in self._cache: break
         return sid
             
-
-# SessionMiddleware stuff.
 
 class SessionService(object):
 
@@ -188,8 +190,6 @@ class SessionService(object):
         transaction.
       service.expired - True if the client is associated with a
         non-existent Session.
-      service.inurl - True if the Session ID should be encoded in
-        the URL. (read/write)
       service.seturl(url) - Returns url encoded with Session ID (if
         necessary).
     '''
@@ -198,116 +198,87 @@ class SessionService(object):
 
     def __init__(self, cache, environ, **kw):
         self._cache = cache
-        self._cookiename = kw.get('cookiename', '_SID_')
+        self._cname = kw.get('cookiename', '_SID_')
         self._fieldname = kw.get('fieldname', '_SID_')
         self._path = kw.get('path', '/')
-        self._session, self._sid, self._csid = None, None, None
-        self._newsession, self._expired, self.inurl = False, False, False
-        if __debug__: self._closed = False
-        self.get(environ)
+        self.session, self._sid, self._csid = None, None, None
+        self._newsession, self.expired = False, False
+        self._get(environ)
+
+    @property
+    def current(self):
+        '''True if a Session currently exists for this client'''
+        return self.session is not None
+
+    @property
+    def new(self):
+        '''Returns True if the session cookie should be added to the header
+        (if not encoding the session ID in the URL). The cookie is added if
+        one of these three conditions are true: a) the session was just
+        created, b) the session is no longer valid, c) the client is
+        associated with a non-existent session, or d) the session id is
+        randomized.
+        '''
+        return self._newsession or (self._csid != self._sid)               
 
     def _fromcookie(self, environ):
         '''Attempt to load the associated session using the identifier from
         the cookie.
         '''
         cookie = SimpleCookie(environ.get('HTTP_COOKIE'))
-        morsel = cookie.get(self._cookiename, None)
+        morsel = cookie.get(self._cname, None)
         if morsel is not None:
-            self._sid, self._session = self._cache.checkout(morsel.value)
-            self._expired, self._csid = self._session is None, morsel.value
+            self._sid, self.session = self._cache.checkout(morsel.value)
+            self._expired, self._csid = self.session is None, morsel.value
 
     def _fromquery(self, environ):
-        '''
-        Attempt to load the associated session using the identifier from
+        '''Attempt to load the associated session using the identifier from
         the query string.
         '''
-        qs = cgi.parse_qsl(environ.get('QUERY_STRING', ''))
-        for name, value in qs:
+        for name, value in cgi.parse_qsl(environ.get('QUERY_STRING', '')):
             if name == self._fieldname:
-                self._sid, self._session = self._cache.checkout(value)
-                self._expired, self._csid = self._session is None, value
-                self.inurl = True
+                self._sid, self.session = self._cache.checkout(value)
+                self._expired, self._csid = self.session is None, value
                 break
         
-    def get(self, environ):
+    def _get(self, environ):
         '''Attempt to associate with an existing Session.'''
         # Try cookie first.
         self._fromcookie(environ)
         # Next, try query string.
-        if self._session is None: self._fromquery(environ)
-
-    def _addcookie(self):
-        '''Returns True if the session cookie should be added to the header
-        (if not encoding the session ID in the URL). The cookie is added if
-        one of these three conditions are true: a) the session was just
-        created, b) the session is no longer valid, or c) the client is
-        associated with a non-existent session.
-        '''
-        return self._newsession or \
-               (self._session is not None) or \
-               (self._session is None and self._expired)
-        
-    def setcookie(self, headers):
-        '''Adds Set-Cookie header if needed.'''
-        if not self.inurl:           
-            expire = False
-            # Reassign cookie if session id is randomized
-            if self._csid != self._sid or self._addcookie():                
-                if self._sid is None: sid, expire = self._expiredid, True
-                cookie, name = SimpleCookie(), self._cookiename
-                cookie[name], cookie[name]['path'] = self._sid, self._path
-                if expire:
-                    # Expire cookie
-                    cookie[name]['expires'] = -365*24*60*60
-                    cookie[name]['max-age'] = 0
-                headers.append(('Set-Cookie', cookie[name].OutputString()))
+        if self.session is None: self._fromquery(environ)
+        if self.session is None:
+            self._sid, self.session = self._cache.create()
+            self._newsession = True
     
     def close(self):
         '''Checks session back into session cache.'''
-        if self._session is None: return
+        if self.session is None: return
         # Check the session back in and get rid of our reference.
-        sid = self._cache.checkin(self._sid, self._session)
-        self._session = None
-        if __debug__: self._closed = True
+        self._cache.checkin(self._sid, self.session)
+        self.session = None
+   
+    def setcookie(self, headers):
+        '''Sets a cookie header if needed.''' 
+        if self._sid is None: sid, self.expired = self._expiredid, True
+        cookie, name = SimpleCookie(), self._cname
+        cookie[name], cookie[name]['path'] = self._sid, self._path
+        if self.expired:
+            # Expire cookie
+            cookie[name]['expires'] = -365*24*60*60
+            cookie[name]['max-age'] = 0
+        headers.append(('Set-Cookie', cookie[name].OutputString())) 
 
-    # Public API
-
-    @property
-    def session(self):
-        '''Returns the Session object associated with this client.'''
-        assert not self._closed
-        if self._session is None:
-            self._sid, self._session = self._cache.create()
-            self._newsession = True
-        assert self._session is not None
-        return self._session
-
-    @property
-    def current(self):
-        '''True if a Session currently exists for this client'''
-        assert not self._closed
-        return self._session is not None
-
-    @property
-    def new(self):
-        '''True if the Session was created in this transaction.'''
-        assert not self._closed
-        return self._newsession
-
-    @property    
-    def expired(self):
-        '''True if the client was associated with a non-existent Session'''
-        assert not self._closed
-        return self._expired
-
-    # Utilities
-
-    def seturl(self, url):
+    def seturl(self, environ):
         '''Encodes session ID in URL, if necessary.'''
-        assert not self._closed
-        if not self.inurl or self._session is None: return url
-        u = list(urlparse.urlsplit(url))
-        q = '%s=%s' % (self._fieldname, self.close())
+        url = [''.join([
+            quote(environ.get('SCRIPT_NAME', '')),
+            quote(environ.get('PATH_INFO', ''))])]
+        if environ.get('QUERY_STRING'):
+            url.append('?' + environ['QUERY_STRING'])
+        url.append('?' + environ['QUERY_STRING'])
+        u = list(urlparse.urlsplit(''.join(url)))
+        q = '%s=%s' % (self._fieldname, self._sid)
         if u[3]:
             u[3] = q + '&' + u[3]
         else:
@@ -319,24 +290,40 @@ class Session(object):
 
     '''WSGI middleware that adds a session service. A SessionService instance
     is passed to the application in environ['com.saddi.service.session'].
-    A references to this instance should not be saved. (A new instance is
+    References to this instance should not be saved. (A new instance is
     instantiated with every call to the application.)
     '''
 
     def __init__(self, application, cache, **kw):
-        self._application, self._cache = application, cache 
-        self._sessionkey = kw.get('sessionkey', 'com.saddi.service.session')
-        self._kw = kw
+        self.application, self.cache, self.kw = application, cache, kw
+        self.key = kw.get('key', 'com.saddi.service.session')
 
     def __call__(self, environ, start_response):
-        service = SessionService(self._cache, environ, **self._kw)
-        environ[self._sessionkey] = service
-        def my_start_response(status, headers, exc_info=None):
-            service.setcookie(headers)
-            service.close()
-            return start_response(status, headers, exc_info)
+        service = SessionService(self.cache, environ, **self.kw)
+        environ[self.key] = service
         try:
-            return self._application(environ, my_start_response)
-        except:
-            # If anything goes wrong, ensure the session is checked back in.
+            if service.new:
+                def session_response(status, headers, exc_info=None):
+                    service.setcookie(headers)
+                    return start_response(status, headers, exc_info)
+                return self.application(environ, session_response)
+            return self.application(environ, start_response)
+        finally:            
             service.close()
+
+
+class URLSession(Session):
+
+    def __call__(self, environ, start_response):
+        service = SessionService(self.cache, environ, **self.kw)
+        environ[self.key] = service
+        try:
+            if service.new:
+                url = service.seturl(environ)
+                start_response('302 Found', [('location', url)])
+                return ['You are being redirected to %s' % url]
+            return self.application(environ, start_response)
+        finally:            
+            service.close()
+    
+        
