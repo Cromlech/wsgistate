@@ -35,10 +35,10 @@ except:
     from distutils.core import setup
 
 setup(name='wsgistate',
-      version='0.1',
-      description='''Session and caching middleware for WSGI.''',
-      long_description='''flup-compatible session and caching middleware for WSGI.
-      Includes support for thread-safe in-memory, disk-based, database, and memcached caches.''',
+      version='0.2',
+      description='''Session, memoizing, and cache control middleware for WSGI.''',
+      long_description='''flup-compatible session, memoizing and cache control middleware for WSGI.
+      Includes support for thread-safe in-memory, disk-based, database, and memcached caching.''',
       author='L. C. Rees',
       author_email='lcrees@gmail.com',
       license='BSD',
