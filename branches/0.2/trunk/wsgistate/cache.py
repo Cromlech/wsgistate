@@ -32,18 +32,20 @@ import cgi
 import marshal
 import time
 import rfc822
+import copy
 
-__all__ = ['WsgiCache', 'cache']
+__all__ = ['WsgiMemoize', 'memoize', 'public', 'private', 'nocache', 'nostore',
+    'notransform', 'revalidate', 'proxyvalidate', 'maxage', 'smaxage', 'vary', 'modified']
 
 def expiredate(value, seconds):
     now = time.time()
     return {'Cache-Control':value % seconds, 'Date':rfc822.formatdate(now),
         'Expires':rfc822.formatdate(now + seconds)}
 
-def cache(cache, **kw):
+def memoize(cache, **kw):
     '''Decorator for caching.'''
     def decorator(application):
-        return WsgiCache(application, cache, **kw)
+        return WsgiMemoize(application, cache, **kw)
     return decorator
 
 def control(application, value):
@@ -144,27 +146,27 @@ class CacheHeader(object):
         self.headers = headers
         
     def __call__(self, environ, start_response):
-        if environ.get('REQUEST_METHOD').upper() in ('GET', 'HEAD'):
-            
+        if environ.get('REQUEST_METHOD') in ('GET', 'HEAD'):            
             def hdr_response(status, headers, exc_info=None):
-                if 'Cache-Control' in self.headers:
-                    print self.headers
+                theaders = self.headers.copy()
+                if 'Cache-Control' in theaders:                    
                     for idx, i in enumerate(headers):
-                        if i[0] == 'Cache-Control':
-                            curval = self.headers.pop('Cache-Control')
-                            newval = ', '.join([i[1], curval])
-                            headers.append(('Cache-Control', newval))
-                            del headers[idx]
-                            break                    
-                headers.extend((k, v) for k, v in self.headers.iteritems())
+                        if i[0] != 'Cache-Control': continue
+                        curval = theaders.pop('Cache-Control')
+                        newval = ', '.join([curval, i[1]])
+                        headers.append(('Cache-Control', newval))
+                        del headers[idx]
+                        break
+                headers.extend((k, v) for k, v in theaders.iteritems())
+                print headers
                 return start_response(status, headers, exc_info)
             return self.application(environ, hdr_response)
         return self.application(environ, start_response)
         
 
-class WsgiCache(object):
+class WsgiMemoize(object):
 
-    '''WSGI middleware for response caching.'''  
+    '''WSGI middleware for response memoizing.'''
 
     def __init__(self, app, cache, **kw):
         self.application, self._cache = app, cache
@@ -186,6 +188,7 @@ class WsgiCache(object):
             return info['data']
         if self._cacheable(environ):
             def cache_response(self, status, headers, exc_info=None):
+                # Add HTTP cache control headers
                 expirehdrs = expiredate(self._cache.timeout, 's-maxage=%d')
                 headers.extend(expirehdrs)
                 cachedict = dict((('status', status), ('headers', headers),
@@ -200,21 +203,22 @@ class WsgiCache(object):
     def _keygen(self, environ):
         '''Generates cache keys.'''
         # Base of key is always path of request
-        key = environ['PATH_INFO']
+        key = [environ['PATH_INFO']]
         # Add method name to key if configured that way
-        if self._methidx: key += environ['REQUEST_METHOD']
+        if self._methidx: key.append(environ['REQUEST_METHOD'])
         # Add marshalled user submitted data to string if configured that way
         if self._useridx:
-            qdict = cgi.parse(environ['wsgi.input'], environ, False, False)
-            key += marshal.dumps(qdict)
-        return key
+            wsginput = copy.copy(environ['wsgi.input'])
+            qdict = cgi.parse(wsginput, environ, False, False)
+            key.append(marshal.dumps(qdict))
+        return ''.join(key)
     
     def _cacheable(self, environ):
         '''Tells if a request should be cached or not.'''
         # Returns false if method is not to be cached
-        if environ['REQUEST_METHOD'] not in self._allowed: return False
+        method = environ['REQUEST_METHOD']
+        if method not in self._allowed: return False
         # Returns false if requests based on user submissions are not to be cached
-        if self._usersub:
-            if 'QUERY_STRING' in environ or environ['REQUEST_METHOD'] == 'POST':
-                return False
+        if self._usersub and ('QUERY_STRING' in environ or method == 'POST'):
+            return False
         return True
