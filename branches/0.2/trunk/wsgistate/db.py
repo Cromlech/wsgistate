@@ -32,7 +32,7 @@
 import time
 from datetime import datetime
 from sqlalchemy import *
-from base import BaseCache
+from wsgistate.base import BaseCache
 
 __all__ = ['DbCache']
 

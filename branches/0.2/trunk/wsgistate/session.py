@@ -41,8 +41,8 @@ try:
 except ImportError:
     import dummy_threading as threading
 
-__all__ = ['SessionCache', 'SessionManager', 'CookieSession', 'URLSession', 'session',
-    'urlsession']
+__all__ = ['SessionCache', 'SessionManager', 'CookieSession', 'URLSession',
+     'session', 'urlsession']
 
 def _shutdown(ref):
     cache = ref()
@@ -163,7 +163,7 @@ class SessionCache(object):
         sid = None
         for num in xrange(10000):
             sid = sha.new(str(random.randint(0, sys.maxint - 1)) +
-                str(random.randint(0, sys.maxint - 1)) + self._secret).hexdigest()
+              str(random.randint(0, sys.maxint - 1)) + self._secret).hexdigest()
             if sid not in self.cache: break
         return sid
             
@@ -187,7 +187,7 @@ class SessionManager(object):
         cookie = SimpleCookie(environ.get('HTTP_COOKIE'))
         morsel = cookie.get(self._fieldname, None)
         if morsel is not None:
-            self._sid, self.session = self._cache.checkout(morsel.value)            
+            self._sid, self.session = self._cache.checkout(morsel.value)
             self._csid = morsel.value
             if self._csid != self._sid: self.new = True
 

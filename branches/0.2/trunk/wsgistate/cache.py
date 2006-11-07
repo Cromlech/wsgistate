@@ -35,7 +35,8 @@ import rfc822
 import copy
 
 __all__ = ['WsgiMemoize', 'memoize', 'public', 'private', 'nocache', 'nostore',
-    'notransform', 'revalidate', 'proxyvalidate', 'maxage', 'smaxage', 'vary', 'modified']
+    'notransform', 'revalidate', 'proxyvalidate', 'maxage', 'smaxage', 'vary',
+    'modified']
 
 def expiredate(value, seconds):
     now = time.time()
@@ -122,7 +123,9 @@ def smaxage(seconds):
 def expires(seconds):
     '''Sets the time a response expires from the cache (HTTP 1.0).'''
     headers = {'Expires':rfc822.formatdate(time.time() + seconds)}
-    return CacheHeader(application, headers)
+    def decorator(application):
+        return CacheHeader(application, headers)
+    return decorator
 
 def vary(headers):
     '''Sets which fields allow a cache to use a response without revalidation.'''
@@ -131,10 +134,12 @@ def vary(headers):
         return CacheHeader(application, headers)
     return decorator
 
-def modified(time=None):
+def modified(seconds=None):
     '''Sets the time a response was modified.'''
-    headers = {'Modified':rfc822.formatdate(time)}
-    return CacheHeader(application, headers)
+    headers = {'Modified':rfc822.formatdate(seconds)}
+    def decorator(application):
+        return CacheHeader(application, headers)
+    return decorator
 
 
 class CacheHeader(object):
@@ -183,7 +188,7 @@ class WsgiMemoize(object):
         key = self._keygen(environ)
         info = self._cache.get(key)
         # Cache if data uncached
-        if cached is not None:
+        if info is not None:
             start_response(info['status'], info['headers'], info['exc_info'])
             return info['data']
         if self._cacheable(environ):

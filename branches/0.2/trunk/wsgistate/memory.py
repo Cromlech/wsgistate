@@ -35,7 +35,7 @@ try:
     import threading
 except ImportError:
     import dummy_threading as threading
-from simple import SimpleCache
+from wsgistate.simple import SimpleCache
 
 __all__ = ['MemoryCache']
 

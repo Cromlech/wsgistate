@@ -34,7 +34,7 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
-from simple import SimpleCache
+from wsgistate.simple import SimpleCache
 
 __all__ = ['FileCache']
 
@@ -93,7 +93,7 @@ class FileCache(SimpleCache):
         try:
             f = open(fname, 'wb')
             now = time.time()
-            pickle.dump(now + self.default_timeout, f, 2)
+            pickle.dump(now + self.timeout, f, 2)
             pickle.dump(value, f, 2)
         except (IOError, OSError): pass
 

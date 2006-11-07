@@ -51,7 +51,7 @@ class BaseCache(object):
         '''Fetch a given key from the cache.'''
         return self.get(key)
 
-    def __setitem__(self, key):
+    def __setitem__(self, key, value):
         '''Set a value in the cache. '''
         self.set(key, value)
 

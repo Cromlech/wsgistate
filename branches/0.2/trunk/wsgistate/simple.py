@@ -30,7 +30,7 @@
 '''Single-process in-memory cache backend.'''
 
 import time
-from base import BaseCache
+from wsgistate.base import BaseCache
 
 __all__ = ['SimpleCache']
 
