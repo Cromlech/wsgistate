@@ -30,7 +30,7 @@ import string
 import weakref
 import atexit
 import cgi
-import urlparse
+import urllib
 import sha
 import random
 import sys
@@ -150,8 +150,8 @@ class SessionCache(object):
                 # Save or delete any sessions that are still out there.
                 for sid, sess in self.checkedout.iteritems():
                     self.cache.set(sid, sess)
-                self.cache._cull()
                 self.checkedout.clear()
+                self.cache._cull()                
                 self._closed = True
         finally:
             self.lock.release()
@@ -177,16 +177,8 @@ class SessionManager(object):
         self._fieldname = kw.get('fieldname', '_SID_')
         self._path = kw.get('path', '/')
         self.session = self._sid = self._csid = None
-        self.expired = self.current = self._new = self.inurl = False
+        self.expired = self.current = self.new = self.inurl = False
         self._get(environ)
-
-    @property
-    def new(self):
-        '''Returns True if a session needs to be added to a cookie or URL query.
-        The cookie is added if the session was just created or the session id
-        is randomized.
-        '''
-        return self._new or self._csid != self._sid
 
     def _fromcookie(self, environ):
         '''Attempt to load the associated session using the identifier from
@@ -197,16 +189,19 @@ class SessionManager(object):
         if morsel is not None:
             self._sid, self.session = self._cache.checkout(morsel.value)            
             self._csid = morsel.value
+            if self._csid != self._sid: self.new = True
 
     def _fromquery(self, environ):
         '''Attempt to load the associated session using the identifier from
         the query string.
         '''
-        qdict = dict(cgi.parse_qsl(environ.get('QUERY_STRING', '')))
-        value = qdict.get(self._fieldname)
+        self._qdict = dict(cgi.parse_qsl(environ.get('QUERY_STRING', '')))
+        value = self._qdict.get(self._fieldname)
         if value is not None:
             self._sid, self.session = self._cache.checkout(value)
-            self._csid, self.inurl = value, True
+            if self._sid is not None:
+                self._csid, self.inurl = value, True
+                if self._csid != self._sid: self.current = self.new = True
         
     def _get(self, environ):
         '''Attempt to associate with an existing Session.'''
@@ -216,7 +211,7 @@ class SessionManager(object):
         if self.session is None: self._fromquery(environ)
         if self.session is None:
             self._sid, self.session = self._cache.create()
-            self._new = True
+            self.new = True
     
     def close(self):
         '''Checks session back into session cache.'''
@@ -232,23 +227,15 @@ class SessionManager(object):
 
     def seturl(self, environ):
         '''Encodes session ID in URL, if necessary.'''
-        # Get path
-        url = [''.join([
-            quote(environ.get('SCRIPT_NAME', '')),
-            quote(environ.get('PATH_INFO', ''))])]
+        path = ''.join([quote(environ.get('SCRIPT_NAME', '')),
+            quote(environ.get('PATH_INFO', ''))])
         # Get query
-        qs = environ.get('QUERY_STRING')
-        if qs is not None: url.append('?' + qs)
-        u = list(urlparse.urlsplit(''.join(url)))
-        q = '%s=%s' % (self._fieldname, self._sid)
-        # Encode session in query string
-        if u[3]:
-            u[3] = q + '&' + u[3]
+        if self._qdict:
+            self._qdict[self._fieldname] = self._sid
         else:
-            u[3] = q
-        return urlparse.urlunsplit(u)
-
-
+            self._qdict = {self._fieldname:self._sid}
+        return '?'.join([path, urllib.urlencode(self._qdict)])
+        
 class _Session(object):
 
     '''WSGI middleware that adds a session service.'''
@@ -292,4 +279,4 @@ class URLSession(_Session):
         url = environ[self.key].seturl(environ)
         # Redirect to URL with session in query component
         start_response('302 Found', [('location', url)])
-        return ['You are being redirected to %s' % url]
+        return ['The browser is being redirected to %s' % url]   
