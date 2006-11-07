@@ -163,7 +163,6 @@ class CacheHeader(object):
                         del headers[idx]
                         break
                 headers.extend((k, v) for k, v in theaders.iteritems())
-                print headers
                 return start_response(status, headers, exc_info)
             return self.application(environ, hdr_response)
         return self.application(environ, start_response)
