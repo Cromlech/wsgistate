@@ -41,12 +41,8 @@ try:
 except ImportError:
     import dummy_threading as threading
 
-<<<<<<< .mine
 __all__ = ['SessionCache', 'SessionManager', 'CookieSession', 'URLSession', 'session',
     'urlsession']
-=======
-__all__ = ['SessionCache', 'Session', 'session', 'urlsession']
->>>>>>> .r10
 
 def _shutdown(ref):
     cache = ref()
@@ -99,17 +95,10 @@ class SessionCache(object):
         '''
         self.lock.acquire()
         try:
-<<<<<<< .mine
             sid, sess = self.newid(), dict()
             self.cache.set(sid, sess)            
             self.checkedout[sid] = sess
             return sid, sess
-=======
-            sid, session = self.newid(), dict()
-            self.cache.set(sid, session)            
-            self.checkedout[sid] = session
-            return sid, session
->>>>>>> .r10
         finally:
             self.lock.release()
 
@@ -125,29 +114,17 @@ class SessionCache(object):
         self.lock.acquire()
         try:
             # If we know it's already checked out, block.
-<<<<<<< .mine
             while sid in self.checkedout: self.lock.wait()
             sess = self.cache.get(sid)
             if sess is not None:
-=======
-            while sid in self.checkedout: self.lock.wait()
-            session = self.cache.get(sid)
-            if session is not None:
->>>>>>> .r10
                 # Randomize session id if set and remove old session id
                 if self._random:
                     self.cache.delete(sid)
                     sid = self.newid()
                 # Put in checkout
-<<<<<<< .mine
                 self.checkedout[sid] = sess
                 return sid, sess
             return None, None
-=======
-                self.checkedout[sid] = session
-                return sid, session
-            return None, None
->>>>>>> .r10
         finally:
             self.lock.release()
 
@@ -159,15 +136,9 @@ class SessionCache(object):
         '''
         self.lock.acquire()
         try:
-<<<<<<< .mine
             del self.checkedout[sid]
             self.cache.set(sid, sess)
             self.lock.notify()
-=======
-            del self.checkedout[sid]
-            self.cache.set(sid, session)
-            self.lock.notify()
->>>>>>> .r10
         finally:            
             self.lock.release()
 
@@ -176,19 +147,11 @@ class SessionCache(object):
         self.lock.acquire()
         try:
             if not self._closed:
-<<<<<<< .mine
                 # Save or delete any sessions that are still out there.
                 for sid, sess in self.checkedout.iteritems():
                     self.cache.set(sid, sess)
                 self.cache._cull()
                 self.checkedout.clear()
-=======
-                # Save or delete any sessions that are still out there.
-                for sid, session in self.checkedout.iteritems():
-                    self.cache.set(sid, session)
-                self.cache._cull()
-                self.checkedout.clear()
->>>>>>> .r10
                 self._closed = True
         finally:
             self.lock.release()
@@ -209,130 +172,63 @@ class SessionManager(object):
 
     '''Session Manager.'''  
 
-<<<<<<< .mine
-=======
-    Public API: (assume service = environ['com.saddi.service.session'])
-      service.session - Returns the Session associated with the client.
-      service.current - True if the client is currently associated with
-        a Session.
-      service.new - True if the Session was created in this
-        transaction.
-      service.expired - True if the client is associated with a
-        non-existent Session.
-      service.inurl - True if the Session ID should be encoded in
-        the URL. (read/write)
-      service.seturl(url) - Returns url encoded with Session ID (if
-        necessary).
-    '''  
-
->>>>>>> .r10
     def __init__(self, cache, environ, **kw):
-<<<<<<< .mine
         self._cache = cache
         self._fieldname = kw.get('fieldname', '_SID_')
         self._path = kw.get('path', '/')
         self.session = self._sid = self._csid = None
         self.expired = self.current = self._new = self.inurl = False
         self._get(environ)
-=======
-        self.cache = cache
-        self.cname = kw.get('cookiename', '_SID_')
-        self.fieldname = kw.get('fieldname', '_SID_')
-        self.path = kw.get('path', '/')
-        self.session = self.sid = self.csid = None
-        self.newsession = self.expired = self.current = self.inurl = False
-        self.get(environ)
->>>>>>> .r10
 
     @property
     def new(self):
-<<<<<<< .mine
         '''Returns True if a session needs to be added to a cookie or URL query.
         The cookie is added if the session was just created or the session id
         is randomized.
-=======
-        '''Returns True if the session cookie should be added to the header.
-        The cookie is added if the session was just created or the session id
-        is randomized.
->>>>>>> .r10
         '''
-<<<<<<< .mine
         return self._new or self._csid != self._sid
-=======
-        return self.newsession or self.csid != self.sid
->>>>>>> .r10
 
-    def fromcookie(self, environ):
+    def _fromcookie(self, environ):
         '''Attempt to load the associated session using the identifier from
         the cookie.
         '''
         cookie = SimpleCookie(environ.get('HTTP_COOKIE'))
-<<<<<<< .mine
         morsel = cookie.get(self._fieldname, None)
-=======
-        morsel = cookie.get(self.cname, None)
->>>>>>> .r10
         if morsel is not None:
-<<<<<<< .mine
             self._sid, self.session = self._cache.checkout(morsel.value)            
             self._csid = morsel.value
-=======
-            self.sid, self.session = self.cache.checkout(morsel.value)
-            self.csid = morsel.value
->>>>>>> .r10
 
-    def fromquery(self, environ):
+    def _fromquery(self, environ):
         '''Attempt to load the associated session using the identifier from
         the query string.
         '''
-<<<<<<< .mine
         qdict = dict(cgi.parse_qsl(environ.get('QUERY_STRING', '')))
         value = qdict.get(self._fieldname)
         if value is not None:
             self._sid, self.session = self._cache.checkout(value)
             self._csid, self.inurl = value, True
-            print value, self.session
-=======
-        for name, value in cgi.parse_qsl(environ.get('QUERY_STRING', '')):
-            if name == self.fieldname:
-                self.sid, self.session = self.cache.checkout(value)
-                self.csid, self.inurl = value, True
-                break
->>>>>>> .r10
         
-    def get(self, environ):
+    def _get(self, environ):
         '''Attempt to associate with an existing Session.'''
         # Try cookie first.
-        self.fromcookie(environ)
+        self._fromcookie(environ)
         # Next, try query string.
-        if self.session is None: self.fromquery(environ)
+        if self.session is None: self._fromquery(environ)
         if self.session is None:
-<<<<<<< .mine
             self._sid, self.session = self._cache.create()
             self._new = True
-=======
-            self.sid, self.session = self.cache.create()
-            self.newsession = True
->>>>>>> .r10
     
     def close(self):
         '''Checks session back into session cache.'''
         # Check the session back in and get rid of our reference.
-        self.cache.checkin(self.sid, self.session)
+        self._cache.checkin(self._sid, self.session)
         self.session = None
-        print 'close'
    
     def setcookie(self, headers):
         '''Sets a cookie header if needed.''' 
-<<<<<<< .mine
         cookie, name = SimpleCookie(), self._fieldname
         cookie[name], cookie[name]['path'] = self._sid, self._path
         headers.append(('Set-Cookie', cookie[name].OutputString()))
-=======
-        cookie, name = SimpleCookie(), self.cname
-        cookie[name], cookie[name]['path'] = self.sid, self.path
-        headers.append(('Set-Cookie', cookie[name].OutputString()))
->>>>>>> .r10
 
     def seturl(self, environ):
         '''Encodes session ID in URL, if necessary.'''
@@ -344,7 +240,7 @@ class SessionManager(object):
         qs = environ.get('QUERY_STRING')
         if qs is not None: url.append('?' + qs)
         u = list(urlparse.urlsplit(''.join(url)))
-        q = '%s=%s' % (self.fieldname, self.sid)
+        q = '%s=%s' % (self._fieldname, self._sid)
         # Encode session in query string
         if u[3]:
             u[3] = q + '&' + u[3]
@@ -370,21 +266,15 @@ class _Session(object):
             # Return intial response if new or session id is random
             if sess.new: return self._initial(environ, start_response)                
             return self.application(environ, start_response)
-<<<<<<< .mine
         # Always close session
         finally:            
             sess.close()
             
-=======
-        finally:            
-            service.close()
->>>>>>> .r10
 
 class CookieSession(_Session):            
 
     '''WSGI middleware that adds a session service in a cookie.'''
 
-<<<<<<< .mine
     def _initial(self, environ, start_response):
         '''Initial response to a cookie session.'''
         def session_response(status, headers, exc_info=None):
@@ -394,19 +284,6 @@ class CookieSession(_Session):
 
 
 class URLSession(_Session):
-=======
-    def __call__(self, environ, start_response):
-        service = SessionService(self.cache, environ, **self.kw)
-        environ[self.key] = service
-        try:
-            if service.new:
-                url = service.seturl(environ)
-                start_response('302 Found', [('location', url)])
-                return ['You are being redirected to %s' % url]
-            return self.application(environ, start_response)
-        finally:            
-            service.close()
->>>>>>> .r10
     
     '''WSGI middleware that adds a session service in a URL query string.'''
 
