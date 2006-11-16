@@ -38,7 +38,7 @@ __all__ = ['WsgiMemoize', 'memoize', 'public', 'private', 'nocache', 'nostore',
     'notransform', 'revalidate', 'proxyvalidate', 'maxage', 'smaxage', 'vary',
     'modified']
 
-def expiredate(value, seconds):
+def expiredate(seconds, value):
     now = time.time()
     return {'Cache-Control':value % seconds, 'Date':rfc822.formatdate(now),
         'Expires':rfc822.formatdate(now + seconds)}
@@ -191,16 +191,18 @@ class WsgiMemoize(object):
             start_response(info['status'], info['headers'], info['exc_info'])
             return info['data']
         if self._cacheable(environ):
-            def cache_response(self, status, headers, exc_info=None):
+            def cache_response(status, headers, exc_info=None):
                 # Add HTTP cache control headers
-                expirehdrs = expiredate(self._cache.timeout, 's-maxage=%d')
-                headers.extend(expirehdrs)
+                newhdrs = expiredate(self._cache.timeout, 's-maxage=%d')
+                headers.extend((k, v) for k, v in newhdrs.iteritems())
                 cachedict = dict((('status', status), ('headers', headers),
                     ('exc_info', exc_info)))
                 self._cache.set(key, cachedict)
                 return start_response(status, headers, exc_info) 
             data = self.application(environ, cache_response)
-            self._cache[key]['data'] = data
+            info = self._cache[key]
+            info['data'] = data
+            self._cache[key] = info
             return data
         return self.application(environ, start_response)
 
