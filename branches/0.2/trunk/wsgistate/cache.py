@@ -75,7 +75,7 @@ def age(value, seconds):
     @param seconds # of seconds a resource should be considered invalid in   
     '''
     def decorator(application):
-        return CacheHeader(application, expiredate(value, seconds))
+        return CacheHeader(application, expiredate(second, svalue))
     return decorator
 
 def public(application):
