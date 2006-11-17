@@ -36,13 +36,14 @@ except:
 
 setup(name='wsgistate',
       version='0.2.5',
-      description='''Session, memoizing, and cache control middleware for WSGI.''',
-      long_description='''flup-compatible session, memoizing and cache control middleware for WSGI.
-      Includes support for thread-safe in-memory, disk-based, database, and memcached caching.''',
+      description='''WSGI session and caching middleware.''',
+      long_description='''Session (flup-compatible), caching, memoizing, and HTTP cache control
+      middleware for WSGI. Supports memory, filesystem, database, and memcached based backends.''',
       author='L. C. Rees',
       author_email='lcrees@gmail.com',
       license='BSD',
       packages = ['wsgistate'],
+      test_suite='test_webstring',
       zip_safe = True,
       keywords='WSGI session caching persistence HTTP Web',
       classifiers=['Development Status :: 3 - Alpha',
