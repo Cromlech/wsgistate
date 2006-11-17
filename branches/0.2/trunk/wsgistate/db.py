@@ -31,7 +31,11 @@
 
 import time
 from datetime import datetime
-from sqlalchemy import *
+try:
+    from sqlalchemy import *
+except ImportError:
+    raise ImportError('DbCache module requires the SQLAlchemy package ' \
+        'from http://www.sqlalchemy.org/')
 from wsgistate.base import BaseCache
 
 __all__ = ['DbCache']
