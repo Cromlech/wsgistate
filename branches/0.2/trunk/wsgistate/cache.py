@@ -34,11 +34,16 @@ import time
 import rfc822
 import copy
 
-__all__ = ['WsgiMemoize', 'memoize', 'public', 'private', 'nocache', 'nostore',
-    'notransform', 'revalidate', 'proxyvalidate', 'maxage', 'smaxage', 'vary',
-    'modified']
+__all__ = ['WsgiMemoize', 'memoize', 'CacheHeader', 'public', 'private',
+    'nocache', 'nostore', 'notransform', 'revalidate', 'proxyvalidate',
+    'maxage', 'smaxage', 'vary', 'modified']
 
 def expiredate(seconds, value):
+    '''Expire date headers for cache control.
+
+    @param seconds Seconds
+    @
+    '''
     now = time.time()
     return {'Cache-Control':value % seconds, 'Date':rfc822.formatdate(now),
         'Expires':rfc822.formatdate(now + seconds)}
@@ -144,16 +149,19 @@ def modified(seconds=None):
 
 class CacheHeader(object):
 
-    '''Controls HTTP Caching headers.'''
+    '''Controls HTTP Cache Control headers.'''
 
     def __init__(self, application, headers):
         self.application = application
         self.headers = headers
         
     def __call__(self, environ, start_response):
-        if environ.get('REQUEST_METHOD') in ('GET', 'HEAD'):            
+        # Restrict cache control to GET and HEAD per HTTP 1.1 RFC
+        if environ.get('REQUEST_METHOD') in ('GET', 'HEAD'):
+            # Co-routine to add cache control headers
             def hdr_response(status, headers, exc_info=None):
                 theaders = self.headers.copy()
+                # Aggregate all 'Cache-Control' directives
                 if 'Cache-Control' in theaders:                    
                     for idx, i in enumerate(headers):
                         if i[0] != 'Cache-Control': continue
@@ -175,34 +183,41 @@ class WsgiMemoize(object):
     def __init__(self, app, cache, **kw):
         self.application, self._cache = app, cache
         # Adds method to cache key
-        self._methidx = kw.get('index_methods', False)
+        self._methkey = kw.get('key_methods', False)
         # Adds user submitted data to cache key
-        self._useridx = kw.get('index_user_info', False)
+        self._userkey = kw.get('key_user_info', False)
         # Which HTTP responses by method are cached
         self._allowed = kw.get('allowed_methods', ('GET', 'HEAD'))
         # Responses to user submitted data is cached
         self._usersub = kw.get('cache_user_info', False)
         
     def __call__(self, environ, start_response):
+        # Generate cache key
         key = self._keygen(environ)
+        # Query cache for key prescence
         info = self._cache.get(key)
-        # Cache if data uncached
+        # Return cached data
         if info is not None:
             start_response(info['status'], info['headers'], info['exc_info'])
             return info['data']
+        # Verify requested response is cacheable
         if self._cacheable(environ):
+            # Cache start_response info
             def cache_response(status, headers, exc_info=None):
                 # Add HTTP cache control headers
                 newhdrs = expiredate(self._cache.timeout, 's-maxage=%d')
                 headers.extend((k, v) for k, v in newhdrs.iteritems())
-                cachedict = dict((('status', status), ('headers', headers),
-                    ('exc_info', exc_info)))
+                cachedict = {'status':status, 'headers':headers, 'exc_info':exc_info}
                 self._cache.set(key, cachedict)
-                return start_response(status, headers, exc_info) 
+                return start_response(status, headers, exc_info)
+            # Get response from WSGI stack
             data = self.application(environ, cache_response)
+            # Fetch cached start_response data
             info = self._cache[key]
+            # Add response
             info['data'] = data
             self._cache[key] = info
+            # Return data as response to intial request
             return data
         return self.application(environ, start_response)
 
@@ -211,9 +226,9 @@ class WsgiMemoize(object):
         # Base of key is always path of request
         key = [environ['PATH_INFO']]
         # Add method name to key if configured that way
-        if self._methidx: key.append(environ['REQUEST_METHOD'])
+        if self._methkey: key.append(environ['REQUEST_METHOD'])
         # Add marshalled user submitted data to string if configured that way
-        if self._useridx:
+        if self._userkey:
             wsginput = copy.copy(environ['wsgi.input'])
             qdict = cgi.parse(wsginput, environ, False, False)
             key.append(marshal.dumps(qdict))
