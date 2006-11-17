@@ -32,8 +32,10 @@ import unittest
 import StringIO
 import copy
 import os
+import time
 from wsgistate import *
 import urlparse
+
 
 class TestWsgiState(unittest.TestCase):
     
@@ -107,6 +109,13 @@ class TestWsgiState(unittest.TestCase):
         cache.set('test2', 'test')
         self.assertEqual('test' in cache, False)
 
+    def test_sc_timeout(self):
+        '''Tests timeout in SimpleCache.'''
+        cache = simple.SimpleCache(timeout=1)
+        cache.set('test', 'test')
+        time.sleep(1)
+        self.assertEqual(cache.get('test'), None)        
+
     def test_mc_set_getitem(self):
         '''Tests __setitem__ and __setitem__ on MemoryCache.'''
         cache = memory.MemoryCache()
@@ -152,6 +161,13 @@ class TestWsgiState(unittest.TestCase):
         cache.set('test2', 'test')
         self.assertEqual('test' in cache, False)
 
+    def test_mc_timeout(self):
+        '''Tests timeout in MemoryCache.'''
+        cache = memory.MemoryCache(timeout=1)
+        cache.set('test', 'test')
+        time.sleep(1)
+        self.assertEqual(cache.get('test'), None)           
+
     def test_fc_set_getitem(self):
         '''Tests __setitem__ and __setitem__ on FileCache.'''
         cache = file.FileCache(os.curdir)
@@ -196,6 +212,13 @@ class TestWsgiState(unittest.TestCase):
         cache = file.FileCache(os.curdir)
         cache.set('test2', 'test')
         self.assertEqual('test' in cache, False)
+
+    def test_fc_timeout(self):
+        '''Tests timeout in FileCache.'''
+        cache = file.FileCache(os.curdir, timeout=1)
+        cache.set('test', 'test')
+        time.sleep(1)
+        self.assertEqual(cache.get('test'), None)           
     
     def test_db_set_getitem(self):
         '''Tests __setitem__ and __setitem__ on DbCache.'''
@@ -242,6 +265,13 @@ class TestWsgiState(unittest.TestCase):
         cache.set('test2', 'test')
         self.assertEqual('test' in cache, False)
 
+    def test_db_timeout(self):
+        '''Tests timeout in DbCache.'''
+        cache = db.DbCache('sqlite:///:memory:', timeout=1)
+        cache.set('test', 'test')
+        time.sleep(2)
+        self.assertEqual(cache.get('test'), None)         
+
     def test_mcd_set_getitem(self):
         '''Tests __setitem__ and __setitem__ on MemCache.'''
         cache = memcached.MemCached('localhost')
@@ -287,72 +317,74 @@ class TestWsgiState(unittest.TestCase):
         cache.set('test2', 'test')
         self.assertEqual('test' in cache, False)
 
+    def test_mcb_timeout(self):
+        '''Tests timeout in DbCache.'''
+        cache = memcached.MemCached('localhost', timeout=1)
+        cache.set('test', 'test')
+        time.sleep(1)
+        self.assertEqual(cache.get('test'), None)          
+
     def test_cookiesession_sc(self):
         '''Tests session cookies with SimpleCache.'''
         testc = simple.SimpleCache()
-        cache, environ = session.SessionCache(testc), {}
+        cache = session.SessionCache(testc)
         csession = session.CookieSession(self.my_app, cache)
-        result = csession(environ, self.dummy_sr)
-        cookie = result['cookie']
-        result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        cookie = csession({}, self.dummy_sr)['cookie']
+        csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_cookiesession_mc(self):
         '''Tests session cookies with MemoryCache.'''
         testc = memory.MemoryCache()
-        cache, environ = session.SessionCache(testc), {}
+        cache = session.SessionCache(testc)
         csession = session.CookieSession(self.my_app, cache)
-        result = csession(environ, self.dummy_sr)
-        cookie = result['cookie']
-        result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        cookie = csession({}, self.dummy_sr)['cookie']
+        csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
         
     def test_cookiesession_fc(self):
         '''Tests session cookies with FileCache.'''
         testc = file.FileCache('.')
-        cache, environ = session.SessionCache(testc), {}
+        cache = session.SessionCache(testc)
         csession = session.CookieSession(self.my_app, cache)
-        result = csession(environ, self.dummy_sr)
-        cookie = result['cookie']
-        result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        cookie = csession({}, self.dummy_sr)['cookie']
+        csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_cookiesession_dc(self):
         '''Tests session cookies with DbCache.'''
         testc = db.DbCache('sqlite:///:memory:')
-        cache, environ = session.SessionCache(testc), {}
+        cache = session.SessionCache(testc)
         csession = session.CookieSession(self.my_app, cache)
-        result = csession(environ, self.dummy_sr)
-        cookie = result['cookie']
-        result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        cookie = csession({}, self.dummy_sr)['cookie']
+        csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_cookiesession_mdc(self):
         '''Tests session cookies with MemCached.'''
         testc = memcached.MemCached('localhost')
-        cache, environ = session.SessionCache(testc), {}
+        cache = session.SessionCache(testc)
         csession = session.CookieSession(self.my_app, cache)
-        result = csession(environ, self.dummy_sr)
-        cookie = result['cookie']
-        result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        cookie = csession({}, self.dummy_sr)['cookie']
+        csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_random_cookiesession_sc(self):
         '''Tests random session cookies with SimpleCache.'''
         testc = simple.SimpleCache()
-        cache, environ = session.SessionCache(testc, random=True), {}
+        cache = session.SessionCache(testc, random=True)
         csession = session.CookieSession(self.my_app, cache)
-        result = csession(environ, self.dummy_sr)
+        result = csession({}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
@@ -361,10 +393,9 @@ class TestWsgiState(unittest.TestCase):
     def test_random_cookiesession_mc(self):
         '''Tests random session cookies with MemoryCache.'''
         testc = memory.MemoryCache()
-        cache, environ = session.SessionCache(testc, random=True), {}
+        cache = session.SessionCache(testc, random=True)
         csession = session.CookieSession(self.my_app, cache)
-        result = csession(environ, self.dummy_sr)
-        cookie = result['cookie']
+        result = csession({}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
@@ -373,9 +404,9 @@ class TestWsgiState(unittest.TestCase):
     def test_random_cookiesession_fc(self):
         '''Tests random session cookies with FileCache.'''
         testc = file.FileCache('.')
-        cache, environ = session.SessionCache(testc, random=True), {}
+        cache = session.SessionCache(testc, random=True)
         csession = session.CookieSession(self.my_app, cache)
-        result = csession(environ, self.dummy_sr)
+        result = csession({}, self.dummy_sr)
         cookie = result['cookie']
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
@@ -385,9 +416,9 @@ class TestWsgiState(unittest.TestCase):
     def test_random_cookiesession_dc(self):
         '''Tests random session cookies with DbCache.'''
         testc = db.DbCache('sqlite:///:memory:')
-        cache, environ = session.SessionCache(testc, random=True), {}
+        cache = session.SessionCache(testc, random=True)
         csession = session.CookieSession(self.my_app, cache)
-        result = csession(environ, self.dummy_sr)
+        result = csession({}, self.dummy_sr)
         cookie = result['cookie']
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
@@ -397,9 +428,9 @@ class TestWsgiState(unittest.TestCase):
     def test_random_cookiesession_mdc(self):
         '''Tests random session cookies with MemCached.'''
         testc = memcached.MemCached('localhost')
-        cache, environ = session.SessionCache(testc, random=True), {}
+        cache = session.SessionCache(testc, random=True)
         csession = session.CookieSession(self.my_app, cache)
-        result = csession(environ, self.dummy_sr)
+        result = csession({}, self.dummy_sr)
         cookie = result['cookie']
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
@@ -409,66 +440,67 @@ class TestWsgiState(unittest.TestCase):
     def test_urlsession_sc(self):
         '''Tests URL encoded sessions with SimpleCache.'''
         testc = simple.SimpleCache()
-        cache, environ = session.SessionCache(testc), {}
+        cache = session.SessionCache(testc)
         csession = session.URLSession(self.my_app2, cache)
-        url = csession(environ, self.dummy_sr2)[0].split()[-1]
+        url = csession({}, self.dummy_sr2)[0].split()[-1]
         query = urlparse.urlsplit(url)[3]
-        result = csession({'QUERY_STRING':query}, self.dummy_sr2)
-        result = csession({'QUERY_STRING':query}, self.dummy_sr2)
-        result = csession({'QUERY_STRING':query}, self.dummy_sr2)
+        csession({'QUERY_STRING':query}, self.dummy_sr2)
+        csession({'QUERY_STRING':query}, self.dummy_sr2)
+        csession({'QUERY_STRING':query}, self.dummy_sr2)
         result = csession({'QUERY_STRING':query}, self.dummy_sr2)
         self.assertEqual(result['count'], 4)
 
     def test_urlsession_mc(self):
         '''Tests URL encoded sessions with MemoryCache.'''
         testc = memory.MemoryCache()
-        cache, environ = session.SessionCache(testc), {}
+        cache = session.SessionCache(testc)
         csession = session.URLSession(self.my_app2, cache)
-        url = csession(environ, self.dummy_sr2)[0].split()[-1]
+        url = csession({}, self.dummy_sr2)[0].split()[-1]
         query = urlparse.urlsplit(url)[3]
-        result = csession({'QUERY_STRING':query}, self.dummy_sr2)
-        result = csession({'QUERY_STRING':query}, self.dummy_sr2)
-        result = csession({'QUERY_STRING':query}, self.dummy_sr2)
+        csession({'QUERY_STRING':query}, self.dummy_sr2)
+        csession({'QUERY_STRING':query}, self.dummy_sr2)
+        csession({'QUERY_STRING':query}, self.dummy_sr2)
         result = csession({'QUERY_STRING':query}, self.dummy_sr2)
         self.assertEqual(result['count'], 4)
         
     def test_urlsession_fc(self):
         '''Tests URL encoded sessions with FileCache.'''
         testc = file.FileCache('.')
-        cache, environ = session.SessionCache(testc), {}
+        cache = session.SessionCache(testc)
         csession = session.URLSession(self.my_app2, cache)
-        url = csession(environ, self.dummy_sr2)[0].split()[-1]
+        url = csession({}, self.dummy_sr2)[0].split()[-1]
         query = urlparse.urlsplit(url)[3]
-        result = csession({'QUERY_STRING':query}, self.dummy_sr2)
-        result = csession({'QUERY_STRING':query}, self.dummy_sr2)
-        result = csession({'QUERY_STRING':query}, self.dummy_sr2)
+        csession({'QUERY_STRING':query}, self.dummy_sr2)
+        csession({'QUERY_STRING':query}, self.dummy_sr2)
+        csession({'QUERY_STRING':query}, self.dummy_sr2)
         result = csession({'QUERY_STRING':query}, self.dummy_sr2)
         self.assertEqual(result['count'], 4)
 
     def test_urlsession_dc(self):
         '''Tests URL encoded sessions with DbCache.'''
         testc = db.DbCache('sqlite:///:memory:')
-        cache, environ = session.SessionCache(testc), {}
+        cache = session.SessionCache(testc)
         csession = session.URLSession(self.my_app2, cache)
-        url = csession(environ, self.dummy_sr2)[0].split()[-1]
+        url = csession({}, self.dummy_sr2)[0].split()[-1]
         query = urlparse.urlsplit(url)[3]
-        result = csession({'QUERY_STRING':query}, self.dummy_sr2)
-        result = csession({'QUERY_STRING':query}, self.dummy_sr2)
-        result = csession({'QUERY_STRING':query}, self.dummy_sr2)
+        csession({'QUERY_STRING':query}, self.dummy_sr2)
+        csession({'QUERY_STRING':query}, self.dummy_sr2)
+        csession({'QUERY_STRING':query}, self.dummy_sr2)
         result = csession({'QUERY_STRING':query}, self.dummy_sr2)
         self.assertEqual(result['count'], 4)
 
     def test_urlsession_mdc(self):
         '''Tests URL encoded sessions with MemCached.'''
         testc = memcached.MemCached('localhost')
-        cache, environ = session.SessionCache(testc), {}
+        cache = session.SessionCache(testc)
         csession = session.URLSession(self.my_app2, cache)
-        url = csession(environ, self.dummy_sr2)[0].split()[-1]
+        url = csession({}, self.dummy_sr2)[0].split()[-1]
         query = urlparse.urlsplit(url)[3]
-        result = csession({'QUERY_STRING':query}, self.dummy_sr2)
-        result = csession({'QUERY_STRING':query}, self.dummy_sr2)
-        result = csession({'QUERY_STRING':query}, self.dummy_sr2)
+        csession({'QUERY_STRING':query}, self.dummy_sr2)
+        csession({'QUERY_STRING':query}, self.dummy_sr2)
+        csession({'QUERY_STRING':query}, self.dummy_sr2)
         result = csession({'QUERY_STRING':query}, self.dummy_sr2)
         self.assertEqual(result['count'], 4)
+        
 
 if __name__ == '__main__': unittest.main()        
