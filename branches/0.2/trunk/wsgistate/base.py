@@ -38,7 +38,6 @@ class BaseCache(object):
     '''Base Cache class.'''    
     
     def __init__(self, *a, **kw):
-        '''Init method.'''
         super(BaseCache, self).__init__()
         timeout = kw.get('timeout', 300)
         try:

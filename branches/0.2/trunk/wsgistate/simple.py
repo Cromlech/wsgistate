@@ -40,7 +40,6 @@ class SimpleCache(BaseCache):
     '''Single-process in-memory cache backend.'''    
     
     def __init__(self, *a, **kw):
-        '''Init method.'''
         super(SimpleCache, self).__init__(*a, **kw)
         self._cache, self._expire_info = dict(), dict()
         max_entries = kw.get('max_entries', 300)

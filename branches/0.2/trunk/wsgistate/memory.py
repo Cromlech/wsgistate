@@ -44,7 +44,6 @@ class MemoryCache(SimpleCache):
     '''Thread-safe in-memory cache backend.'''    
 
     def __init__(self, *a, **kw):
-        '''Init method.'''
         super(MemoryCache, self).__init__(*a, **kw)
         self._lock = threading.Condition()
         
