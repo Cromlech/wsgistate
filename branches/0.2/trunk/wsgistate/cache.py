@@ -28,11 +28,9 @@
 
 '''WSGI middleware for caching.'''
 
-import cgi
-import marshal
 import time
 import rfc822
-import copy
+from copy import copy
 
 __all__ = ['WsgiMemoize', 'memoize', 'CacheHeader', 'public', 'private',
     'nocache', 'nostore', 'notransform', 'revalidate', 'proxyvalidate',
@@ -187,9 +185,7 @@ class WsgiMemoize(object):
         # Adds user submitted data to cache key
         self._userkey = kw.get('key_user_info', False)
         # Which HTTP responses by method are cached
-        self._allowed = kw.get('allowed_methods', ('GET', 'HEAD'))
-        # Responses to user submitted data is cached
-        self._usersub = kw.get('cache_user_info', False)
+        self._allowed = kw.get('allowed_methods', set(['GET', 'HEAD']))
         
     def __call__(self, environ, start_response):
         # Generate cache key
@@ -201,7 +197,7 @@ class WsgiMemoize(object):
             start_response(info['status'], info['headers'], info['exc_info'])
             return info['data']
         # Verify requested response is cacheable
-        if self._cacheable(environ):
+        if environ['REQUEST_METHOD'] in self._allowed:
             # Cache start_response info
             def cache_response(status, headers, exc_info=None):
                 # Add HTTP cache control headers
@@ -227,19 +223,12 @@ class WsgiMemoize(object):
         key = [environ['PATH_INFO']]
         # Add method name to key if configured that way
         if self._methkey: key.append(environ['REQUEST_METHOD'])
-        # Add marshalled user submitted data to string if configured that way
+        # Add user submitted data to string if configured that way
         if self._userkey:
-            wsginput = copy.copy(environ['wsgi.input'])
-            qdict = cgi.parse(wsginput, environ, False, False)
-            key.append(marshal.dumps(qdict))
+            qs = environ.get('QUERY_STRING', '')            
+            if qs != '':
+                key.append(qs)
+            else:
+                win = copy(environ['wsgi.input']).read()
+                if win != '': key.append(win)
         return ''.join(key)
-    
-    def _cacheable(self, environ):
-        '''Tells if a request should be cached or not.'''
-        # Returns false if method is not to be cached
-        method = environ['REQUEST_METHOD']
-        if method not in self._allowed: return False
-        # Returns false if requests based on user submissions are not to be cached
-        if self._usersub and ('QUERY_STRING' in environ or method == 'POST'):
-            return False
-        return True
