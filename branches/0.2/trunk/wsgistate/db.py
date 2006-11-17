@@ -42,7 +42,6 @@ class DbCache(BaseCache):
     '''Database cache backend.'''
 
     def __init__(self, *a, **kw):
-        '''Init method.'''
         super(DbCache, self).__init__(self, *a, **kw)
         # Bind metadata
         self._metadata = BoundMetaData(a[0])
