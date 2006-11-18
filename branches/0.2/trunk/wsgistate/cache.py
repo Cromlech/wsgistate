@@ -32,8 +32,8 @@ import time
 import rfc822
 from copy import copy
 
-__all__ = ['WsgiMemoize', 'memoize', 'CacheHeader', 'public', 'private',
-    'nocache', 'nostore', 'notransform', 'revalidate', 'proxyvalidate',
+__all__ = ['WsgiMemoize', 'CacheHeader', 'memoize', 'public', 'private',
+    'nocache', 'nostore', 'notransform', 'revalidate', 'proxyrevalidate',
     'maxage', 'smaxage', 'vary', 'modified']
 
 def expiredate(seconds, value):
@@ -71,14 +71,14 @@ def expire(application, value):
     headers = {'Cache-Control':value, 'Date':now, 'Expires':now}
     return CacheHeader(application, headers)
 
-def age(value, seconds):
+def age(value, second):
     '''Generic setter for 'Cache-Control' headers + future expiration info.
 
     @param value 'Cache-Control' value
     @param seconds # of seconds a resource should be considered invalid in   
     '''
     def decorator(application):
-        return CacheHeader(application, expiredate(second, svalue))
+        return CacheHeader(application, expiredate(second, value))
     return decorator
 
 def public(application):
