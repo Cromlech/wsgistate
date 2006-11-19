@@ -205,14 +205,15 @@ class WsgiMemoize(object):
                 headers.extend((k, v) for k, v in newhdrs.iteritems())
                 cachedict = {'status':status, 'headers':headers, 'exc_info':exc_info}
                 self._cache.set(key, cachedict)
-                return start_response(status, headers, exc_info)
-            # Get response from WSGI stack
-            data = self.application(environ, cache_response)
-            # Fetch cached start_response data
-            info = self._cache[key]
-            # Add response
+                return start_response(status, headers, exc_info)            
+            # Wrap data in list to trigger iterator (Roberto De Alemeida)
+            data = list(self.application(environ, cache_response))
+            # Fetch cached dictionary
+            info = self._cache.get(key)
+            # Store in dictionary
             info['data'] = data
-            self._cache[key] = info
+            # Store in cache
+            self._cache.set(key, info)
             # Return data as response to intial request
             return data
         return self.application(environ, start_response)
