@@ -40,7 +40,7 @@ def expiredate(seconds, value):
     '''Expire date headers for cache control.
 
     @param seconds Seconds
-    @
+    @param value Value for Cache-Control header
     '''
     now = time.time()
     return {'Cache-Control':value % seconds, 'Date':rfc822.formatdate(now),
