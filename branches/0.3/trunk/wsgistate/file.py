@@ -35,8 +35,43 @@ try:
 except ImportError:
     import pickle
 from wsgistate.simple import SimpleCache
+from wsgistate.cache import WsgiMemoize
+from wsgistate.session import CookieSession, URLSession, SessionCache
 
-__all__ = ['FileCache']
+__all__ = ['FileCache', 'memoize', 'session', 'urlsession']
+
+
+def memoize(path, **kw):
+    '''Decorator for caching.
+
+    @param path Filesystem path
+    '''
+    def decorator(application):
+        _file_memo_cache = FileCache(path, **kw)
+        return WsgiMemoize(application, _file_memo_cache, **kw)
+    return decorator
+
+def session(path, **kw):
+    '''Decorator for sessions.
+
+    @param path Filesystem path
+    '''
+    def decorator(application):
+        _file_base_cache = FileCache(path, **kw)
+        _file_session_cache = SessionCache(_file_base_cache, **kw)
+        return CookieSession(application, _file_session_cache, **kw)
+    return decorator
+
+def urlsession(path, **kw):
+    '''Decorator for URL encoded sessions.
+
+    @param path Filesystem path
+    '''
+    def decorator(application):
+        _file_ubase_cache = FileCache(path, **kw)
+        _file_url_cache = SessionCache(_file_ubase_cache, **kw)
+        return URLSession(application, _file_url_cache, **kw)
+    return decorator
 
 
 class FileCache(SimpleCache):

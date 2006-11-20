@@ -37,8 +37,43 @@ except ImportError:
     raise ImportError('DbCache module requires the SQLAlchemy package ' \
         'from http://www.sqlalchemy.org/')
 from wsgistate.base import BaseCache
+from wsgistate.cache import WsgiMemoize
+from wsgistate.session import CookieSession, URLSession, SessionCache
 
-__all__ = ['DbCache']
+__all__ = ['DbCache', 'memoize', 'session', 'urlsession']
+
+
+def memoize(initstr, **kw):
+    '''Decorator for caching.
+
+    @param initstr Database initialization string
+    '''
+    def decorator(application):
+        _db_memo_cache = DbCache(initstr, **kw)
+        return WsgiMemoize(application, _db_memo_cache, **kw)
+    return decorator
+
+def session(initstr, **kw):
+    '''Decorator for sessions.
+
+    @param initstr Database initialization string
+    '''
+    def decorator(application):
+        _db_base_cache = DbCache(initstr, **kw)
+        _db_session_cache = SessionCache(_db_base_cache, **kw)
+        return CookieSession(application, _db_session_cache, **kw)
+    return decorator
+
+def urlsession(initstr, **kw):
+    '''Decorator for URL encoded sessions.
+
+    @param initstr Database initialization string
+    '''
+    def decorator(application):
+        _db_ubase_cache = DbCache(initstr, **kw)
+        _db_url_cache = SessionCache(_db_ubase_cache, **kw)
+        return URLSession(application, _db_url_cache, **kw)
+    return decorator
 
 
 class DbCache(BaseCache):     

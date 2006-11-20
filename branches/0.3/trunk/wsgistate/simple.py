@@ -31,8 +31,33 @@
 
 import time
 from wsgistate.base import BaseCache
+from wsgistate.cache import WsgiMemoize
+from wsgistate.session import CookieSession, URLSession, SessionCache
 
-__all__ = ['SimpleCache']
+__all__ = ['SimpleCache', 'memoize', 'session', 'urlsession']
+
+def memoize(**kw):
+    '''Decorator for caching.'''
+    def decorator(application):
+        _simple_memo_cache = SimpleCache(**kw)
+        return WsgiMemoize(application, _simple_memo_cache, **kw)
+    return decorator
+
+def session(**kw):
+    '''Decorator for sessions.'''
+    def decorator(application):
+        _simple_base_cache = SimpleCache(**kw)
+        _simple_session_cache = SessionCache(_simple_base_cache, **kw)
+        return CookieSession(application, _simple_session_cache, **kw)
+    return decorator
+
+def urlsession(**kw):
+    '''Decorator for URL encoded sessions.'''
+    def decorator(application):
+        _simple_ubase_cache = SimpleCache(**kw)
+        _simple_url_cache = SessionCache(_simple_ubase_cache, **kw)
+        return URLSession(application, _simple_url_cache, **kw)
+    return decorator
 
 
 class SimpleCache(BaseCache):

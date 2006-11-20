@@ -34,8 +34,43 @@ try:
 except ImportError:
     raise ImportError("Memcached cache backend requires the 'memcache' library")
 from wsgistate.base import BaseCache
+from wsgistate.cache import WsgiMemoize
+from wsgistate.session import CookieSession, URLSession, SessionCache
 
-__all__ = ['MemCached']
+__all__ = ['MemCached', 'memoize', 'session', 'urlsession']
+
+
+def memoize(path, **kw):
+    '''Decorator for caching.
+
+    @param path Client path
+    '''
+    def decorator(application):
+        _mc_memo_cache = MemCached(path, **kw)
+        return WsgiMemoize(application, _mc_memo_cache, **kw)
+    return decorator
+
+def session(path, **kw):
+    '''Decorator for sessions.
+
+    @param path Client path
+    '''
+    def decorator(application):
+        _mc_base_cache = MemCached(path, **kw)
+        _mc_session_cache = SessionCache(_mc_base_cache, **kw)
+        return CookieSession(application, _mc_session_cache, **kw)
+    return decorator
+
+def urlsession(path, **kw):
+    '''Decorator for URL encoded sessions.
+
+    @param path Client path
+    '''
+    def decorator(application):
+        _mc_ubase_cache = MemCached(path, **kw)
+        _mc_url_cache = SessionCache(_mc_ubase_cache, **kw)
+        return URLSession(application, _mc_url_cache, **kw)
+    return decorator
 
 
 class MemCached(BaseCache):

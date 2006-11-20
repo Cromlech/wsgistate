@@ -36,8 +36,34 @@ try:
 except ImportError:
     import dummy_threading as threading
 from wsgistate.simple import SimpleCache
+from wsgistate.cache import WsgiMemoize
+from wsgistate.session import CookieSession, URLSession, SessionCache
 
-__all__ = ['MemoryCache']
+__all__ = ['MemoryCache', 'memoize', 'session', 'urlsession']
+
+def memoize(**kw):
+    '''Decorator for caching.'''
+    def decorator(application):
+        _mem_memo_cache = MemoryCache(**kw)
+        return WsgiMemoize(application, _mem_memo_cache, **kw)
+    return decorator
+
+def session(**kw):
+    '''Decorator for sessions.'''
+    def decorator(application):
+        _mem_base_cache = MemoryCache(**kw)
+        _mem_session_cache = SessionCache(_mem_base_cache, **kw)
+        return CookieSession(application, _mem_session_cache, **kw)
+    return decorator
+
+def urlsession(**kw):
+    '''Decorator for URL encoded sessions.'''
+    def decorator(application):
+        _mem_ubase_cache = MemoryCache(**kw)
+        _mem_url_cache = SessionCache(_mem_ubase_cache, **kw)
+        return URLSession(application, _mem_url_cache, **kw)
+    return decorator
+
 
 class MemoryCache(SimpleCache):
 
