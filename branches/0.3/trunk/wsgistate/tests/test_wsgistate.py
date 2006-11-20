@@ -380,6 +380,91 @@ class TestWsgiState(unittest.TestCase):
         result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
+    def test_dec_cookiesession_sc(self):
+        '''Tests session cookies with SimpleCache decorator.'''
+        @simple.session()
+        def tapp(environ, start_response):
+            session = environ['com.saddi.service.session'].session
+            count = session.get('count', 0) + 1
+            session['count'] = count
+            environ['count'] = count
+            headers = start_response('200 OK', [])
+            if headers: environ['cookie'] = headers[0][1]
+            return environ
+        cookie = tapp({}, self.dummy_sr)['cookie']
+        tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        self.assertEqual(result['count'], 4)
+
+    def test_dec_cookiesession_mc(self):
+        '''Tests session cookies with MemoryCache decorator.'''
+        @memory.session()
+        def tapp(environ, start_response):
+            session = environ['com.saddi.service.session'].session
+            count = session.get('count', 0) + 1
+            session['count'] = count
+            environ['count'] = count
+            headers = start_response('200 OK', [])
+            if headers: environ['cookie'] = headers[0][1]
+            return environ
+        cookie = tapp({}, self.dummy_sr)['cookie']
+        tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        self.assertEqual(result['count'], 4)
+
+    def test_dec_cookiesession_fc(self):
+        '''Tests session cookies with FileCache decorator.'''
+        @file.session('test_wsgistate')
+        def tapp(environ, start_response):
+            session = environ['com.saddi.service.session'].session
+            count = session.get('count', 0) + 1
+            session['count'] = count
+            environ['count'] = count
+            headers = start_response('200 OK', [])
+            if headers: environ['cookie'] = headers[0][1]
+            return environ
+        cookie = tapp({}, self.dummy_sr)['cookie']
+        tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        self.assertEqual(result['count'], 4)
+
+    def test_dec_cookiesession_db(self):
+        '''Tests session cookies with DbCache decorator.'''
+        @db.session('sqlite:///:memory:')
+        def tapp(environ, start_response):
+            session = environ['com.saddi.service.session'].session
+            count = session.get('count', 0) + 1
+            session['count'] = count
+            environ['count'] = count
+            headers = start_response('200 OK', [])
+            if headers: environ['cookie'] = headers[0][1]
+            return environ
+        cookie = tapp({}, self.dummy_sr)['cookie']
+        tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        self.assertEqual(result['count'], 4)
+
+    def test_dec_cookiesession_mc(self):
+        '''Tests session cookies with memcached decorator.'''
+        @memcached.session('localhost')
+        def tapp(environ, start_response):
+            session = environ['com.saddi.service.session'].session
+            count = session.get('count', 0) + 1
+            session['count'] = count
+            environ['count'] = count
+            headers = start_response('200 OK', [])
+            if headers: environ['cookie'] = headers[0][1]
+            return environ
+        cookie = tapp({}, self.dummy_sr)['cookie']
+        tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        self.assertEqual(result['count'], 4)          
+
     def test_random_cookiesession_sc(self):
         '''Tests random session cookies with SimpleCache.'''
         testc = simple.SimpleCache()
@@ -408,7 +493,6 @@ class TestWsgiState(unittest.TestCase):
         cache = session.SessionCache(testc, random=True)
         csession = session.CookieSession(self.my_app, cache)
         result = csession({}, self.dummy_sr)
-        cookie = result['cookie']
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
@@ -420,7 +504,6 @@ class TestWsgiState(unittest.TestCase):
         cache = session.SessionCache(testc, random=True)
         csession = session.CookieSession(self.my_app, cache)
         result = csession({}, self.dummy_sr)
-        cookie = result['cookie']
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
@@ -432,11 +515,95 @@ class TestWsgiState(unittest.TestCase):
         cache = session.SessionCache(testc, random=True)
         csession = session.CookieSession(self.my_app, cache)
         result = csession({}, self.dummy_sr)
-        cookie = result['cookie']
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
+
+    def test_dec_random_cookiesession_sc(self):
+        '''Tests random session cookies with SimpleCache decorator.'''
+        @simple.session(random=True)
+        def tapp(environ, start_response):
+            session = environ['com.saddi.service.session'].session
+            count = session.get('count', 0) + 1
+            session['count'] = count
+            environ['count'] = count
+            headers = start_response('200 OK', [])
+            if headers: environ['cookie'] = headers[0][1]
+            return environ
+        result = tapp({}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        self.assertEqual(result['count'], 4)
+
+    def test_dec_random_cookiesession_mc(self):
+        '''Tests random session cookies with MemoryCache decorator.'''
+        @memory.session(random=True)
+        def tapp(environ, start_response):
+            session = environ['com.saddi.service.session'].session
+            count = session.get('count', 0) + 1
+            session['count'] = count
+            environ['count'] = count
+            headers = start_response('200 OK', [])
+            if headers: environ['cookie'] = headers[0][1]
+            return environ
+        result = tapp({}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        self.assertEqual(result['count'], 4)
+
+    def test_dec_random_cookiesession_fc(self):
+        '''Tests random session cookies with FileCache decorator.'''
+        @file.session('test_wsgistate', random=True)
+        def tapp(environ, start_response):
+            session = environ['com.saddi.service.session'].session
+            count = session.get('count', 0) + 1
+            session['count'] = count
+            environ['count'] = count
+            headers = start_response('200 OK', [])
+            if headers: environ['cookie'] = headers[0][1]
+            return environ
+        result = tapp({}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        self.assertEqual(result['count'], 4)
+
+    def test_dec_random_cookiesession_db(self):
+        '''Tests random session cookies with DbCache decorator.'''
+        @db.session('sqlite:///:memory:', random=True)
+        def tapp(environ, start_response):
+            session = environ['com.saddi.service.session'].session
+            count = session.get('count', 0) + 1
+            session['count'] = count
+            environ['count'] = count
+            headers = start_response('200 OK', [])
+            if headers: environ['cookie'] = headers[0][1]
+            return environ
+        result = tapp({}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        self.assertEqual(result['count'], 4)
+
+    def test_dec_random_cookiesession_mcd(self):
+        '''Tests random session cookies with memcached decorator.'''
+        @memcached.session('localhost', random=True)
+        def tapp(environ, start_response):
+            session = environ['com.saddi.service.session'].session
+            count = session.get('count', 0) + 1
+            session['count'] = count
+            environ['count'] = count
+            headers = start_response('200 OK', [])
+            if headers: environ['cookie'] = headers[0][1]
+            return environ
+        result = tapp({}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        self.assertEqual(result['count'], 4)                
 
     def test_urlsession_sc(self):
         '''Tests URL encoded sessions with SimpleCache.'''
@@ -503,8 +670,103 @@ class TestWsgiState(unittest.TestCase):
         result = csession({'QUERY_STRING':query}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
+    def test_dec_urlsession_sc(self):
+        '''Tests URL encoded sessions with SimpleCache.'''
+        @simple.urlsession()
+        def csession(environ, start_response):
+            session = environ['com.saddi.service.session'].session
+            count = session.get('count', 0) + 1
+            session['count'] = count
+            environ['count'] = count
+            headers = start_response('200 OK', [])
+            if headers: environ['cookie'] = headers[0][1]
+            return environ
+        url = csession({}, self.dummy_sr)[0].split()[-1]
+        query = urlparse.urlsplit(url)[3]
+        csession({'QUERY_STRING':query}, self.dummy_sr)
+        csession({'QUERY_STRING':query}, self.dummy_sr)
+        csession({'QUERY_STRING':query}, self.dummy_sr)
+        result = csession({'QUERY_STRING':query}, self.dummy_sr)
+        self.assertEqual(result['count'], 4)
+
+    def test_dec_urlsession_mc(self):
+        '''Tests URL encoded sessions with MemoryCache decorator.'''
+        @memory.urlsession()
+        def csession(environ, start_response):
+            session = environ['com.saddi.service.session'].session
+            count = session.get('count', 0) + 1
+            session['count'] = count
+            environ['count'] = count
+            headers = start_response('200 OK', [])
+            if headers: environ['cookie'] = headers[0][1]
+            return environ
+        url = csession({}, self.dummy_sr)[0].split()[-1]
+        query = urlparse.urlsplit(url)[3]
+        csession({'QUERY_STRING':query}, self.dummy_sr)
+        csession({'QUERY_STRING':query}, self.dummy_sr)
+        csession({'QUERY_STRING':query}, self.dummy_sr)
+        result = csession({'QUERY_STRING':query}, self.dummy_sr)
+        self.assertEqual(result['count'], 4)
+        
+    def test_dec_urlsession_fc(self):
+        '''Tests URL encoded sessions with FileCache decorator.'''
+        @file.urlsession('test_wsgistate')
+        def csession(environ, start_response):
+            session = environ['com.saddi.service.session'].session
+            count = session.get('count', 0) + 1
+            session['count'] = count
+            environ['count'] = count
+            headers = start_response('200 OK', [])
+            if headers: environ['cookie'] = headers[0][1]
+            return environ
+        url = csession({}, self.dummy_sr)[0].split()[-1]
+        query = urlparse.urlsplit(url)[3]
+        csession({'QUERY_STRING':query}, self.dummy_sr)
+        csession({'QUERY_STRING':query}, self.dummy_sr)
+        csession({'QUERY_STRING':query}, self.dummy_sr)
+        result = csession({'QUERY_STRING':query}, self.dummy_sr)
+        self.assertEqual(result['count'], 4)
+
+    def test_dec_urlsession_dc(self):
+        '''Tests URL encoded sessions with DbCache decorator.'''
+        @db.urlsession('sqlite:///:memory:')
+        def csession(environ, start_response):
+            session = environ['com.saddi.service.session'].session
+            count = session.get('count', 0) + 1
+            session['count'] = count
+            environ['count'] = count
+            headers = start_response('200 OK', [])
+            if headers: environ['cookie'] = headers[0][1]
+            return environ
+        url = csession({}, self.dummy_sr)[0].split()[-1]
+        query = urlparse.urlsplit(url)[3]
+        csession({'QUERY_STRING':query}, self.dummy_sr)
+        csession({'QUERY_STRING':query}, self.dummy_sr)
+        csession({'QUERY_STRING':query}, self.dummy_sr)
+        result = csession({'QUERY_STRING':query}, self.dummy_sr)
+        self.assertEqual(result['count'], 4)
+
+    def test_dec_urlsession_mdc(self):
+        '''Tests URL encoded sessions with MemCached decorator.'''
+        @memcached.urlsession('localhost')
+        def csession(environ, start_response):
+            session = environ['com.saddi.service.session'].session
+            count = session.get('count', 0) + 1
+            session['count'] = count
+            environ['count'] = count
+            headers = start_response('200 OK', [])
+            if headers: environ['cookie'] = headers[0][1]
+            return environ
+        url = csession({}, self.dummy_sr)[0].split()[-1]
+        query = urlparse.urlsplit(url)[3]
+        csession({'QUERY_STRING':query}, self.dummy_sr)
+        csession({'QUERY_STRING':query}, self.dummy_sr)
+        csession({'QUERY_STRING':query}, self.dummy_sr)
+        result = csession({'QUERY_STRING':query}, self.dummy_sr)
+        self.assertEqual(result['count'], 4)        
+
     def test_wsgimemoize_default_sc(self):
-        '''Tests default memoizing with SimpleCache.'''
+        '''Tests default memoizing with SimpleCache decorator.'''
         testc = simple.SimpleCache()
         env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
         cacheapp = cache.WsgiMemoize(self.my_app3, testc)
@@ -547,6 +809,61 @@ class TestWsgiState(unittest.TestCase):
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
         self.assertEqual(result1 == result2, True)
+
+    def test_dec_wsgimemoize_default_sc(self):
+        '''Tests default memoizing with SimpleCache decorator.'''
+        @simple.memoize()
+        def cacheapp(environ, start_response):
+            start_response('200 OK', [])
+            return ['passed']
+        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
+        result1 = cacheapp(env, self.dummy_sr)
+        result2 = cacheapp(env, self.dummy_sr)
+        self.assertEqual(result1 == result2, True)
+
+    def test_dec_wsgimemoize_default_mc(self):
+        '''Tests default memoizing with MemoryCache.'''
+        @memory.memoize()
+        def cacheapp(environ, start_response):
+            start_response('200 OK', [])
+            return ['passed']
+        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
+        result1 = cacheapp(env, self.dummy_sr)
+        result2 = cacheapp(env, self.dummy_sr)
+        self.assertEqual(result1 == result2, True)
+
+    def test_dec_wsgimemoize_default_fc(self):
+        '''Tests default memoizing with FileCache.'''
+        @file.memoize('test_wsgistate')
+        def cacheapp(environ, start_response):
+            start_response('200 OK', [])
+            return ['passed']
+        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
+        result1 = cacheapp(env, self.dummy_sr)
+        result2 = cacheapp(env, self.dummy_sr)
+        self.assertEqual(result1 == result2, True)
+
+    def test_dec_wsgimemoize_default_db(self):
+        '''Tests default memoizing with DbCache.'''
+        @db.memoize('sqlite:///:memory:')
+        def cacheapp(environ, start_response):
+            start_response('200 OK', [])
+            return ['passed']
+        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
+        result1 = cacheapp(env, self.dummy_sr)
+        result2 = cacheapp(env, self.dummy_sr)
+        self.assertEqual(result1 == result2, True)
+
+    def test_dec_wsgimemoize_fault_mcd(self):
+        '''Tests default memoizing with MemCached.'''
+        @memcached.memoize('localhost')
+        def cacheapp(environ, start_response):
+            start_response('200 OK', [])
+            return ['passed']
+        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
+        result1 = cacheapp(env, self.dummy_sr)
+        result2 = cacheapp(env, self.dummy_sr)
+        self.assertEqual(result1 == result2, True)        
 
     def test_wsgimemoize_method_sc(self):
         '''Tests memoizing with HTTP method as part of the key with SimpleCache.'''
@@ -786,4 +1103,8 @@ class TestWsgiState(unittest.TestCase):
 
     'modified'        
 
-if __name__ == '__main__': unittest.main()        
+if __name__ == '__main__':
+    unittest.main()
+    try:
+        os.rmdir('test_wsgistate')
+    except IOError: pass
