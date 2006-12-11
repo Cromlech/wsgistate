@@ -88,7 +88,6 @@ class FileCache(SimpleCache):
         if not os.path.exists(self._dir): self._createdir()
         # Remove unneeded methods and attributes
         del self._cache
-        del self._expire_info
 
     def __contains__(self, key):
         '''Tell if a given key is in the cache.'''
@@ -101,16 +100,13 @@ class FileCache(SimpleCache):
         @param key Keyword of item in cache.
         @param default Default value (default: None)
         '''
-        fname = self._key_to_file(key)
         try:
-            f = open(fname, 'rb')
-            exp, now = pickle.load(f), time.time()
+            exp, value = pickle.load(open(self._key_to_file(key), 'rb')) 
             # Remove item if time has expired.
-            if exp < now:
-                f.close()
-                os.remove(fname)
-            else:
-                return pickle.load(f)
+            if exp < time.time():
+                self.delete(key)
+                return default
+            return value
         except (IOError, OSError, EOFError, pickle.PickleError): pass
         return default
 
@@ -119,19 +115,11 @@ class FileCache(SimpleCache):
 
         @param key Keyword of item in cache.
         @param value Value to be inserted in cache.        
-        '''
-        fname = self._key_to_file(key)
+        '''        
+        if len(self.keys()) > self._max_entries: self._cull()
         try:
-            filelist = os.listdir(self._dir)
-        except (IOError, OSError):
-            self._createdir()
-            filelist = list()
-        if len(filelist) > self._max_entries: self._cull()
-        try:
-            f = open(fname, 'wb')
-            now = time.time()
-            pickle.dump(now + self.timeout, f, 2)
-            pickle.dump(value, f, 2)
+            fname = self._key_to_file(key)
+            pickle.dump((time.time() + self.timeout, value), open(fname, 'wb'), 2)
         except (IOError, OSError): pass
 
     def delete(self, key):
@@ -143,26 +131,10 @@ class FileCache(SimpleCache):
             os.remove(self._key_to_file(key))
         except (IOError, OSError): pass
 
-    def _cull(self):
-        '''Remove items in cache that have timed out.'''
-        try:
-            filelist = os.listdir(self._dir)
-        except (IOError, OSError):
-            self._createdir()
-            filelist = list()
-        for fname in filelist:
-            # Remove expired items from cache.
-            try:
-                f = open(fname, 'rb')
-                exp = pickle.load(f)
-                now = time.time()
-                if exp < now:
-                    f.close()
-                    try:
-                        os.remove(os.path.join(self._dir, fname))
-                    except (IOError, OSError): pass
-            except (IOError, OSError, EOFError, pickle.PickleError): pass            
-
+    def keys(self):
+        '''Returns a list of keys in the cache.'''
+        return os.listdir(self._dir)
+    
     def _createdir(self):
         '''Creates the cache directory.'''
         try:

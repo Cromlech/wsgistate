@@ -89,10 +89,8 @@ class MemCached(BaseCache):
         @param default Default value (default: None)
         '''
         val = self._cache.get(key)
-        if val is None:
-            return default
-        else:
-            return val
+        if val is None: return default
+        return val
 
     def set(self, key, value):
         '''Set a value in the cache.

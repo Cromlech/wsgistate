@@ -30,6 +30,7 @@
 '''Single-process in-memory cache backend.'''
 
 import time
+import random
 from wsgistate import BaseCache
 from wsgistate.cache import WsgiMemoize
 from wsgistate.session import CookieSession, URLSession, SessionCache
@@ -66,12 +67,17 @@ class SimpleCache(BaseCache):
     
     def __init__(self, *a, **kw):
         super(SimpleCache, self).__init__(*a, **kw)
-        self._cache, self._expire_info = dict(), dict()
+        # Get random seed
+        random.seed()        
+        self._cache = dict()
+        # Set max entries
         max_entries = kw.get('max_entries', 300)
         try:
             self._max_entries = int(max_entries)
         except (ValueError, TypeError):
             self._max_entries = 300
+        # Set maximum number of items to cull if over max
+        self._maxcull = kw.get('maxcull', 10)
 
     def get(self, key, default=None):
         '''Fetch a given key from the cache.  If the key does not exist, return
@@ -80,15 +86,13 @@ class SimpleCache(BaseCache):
         @param key Keyword of item in cache.
         @param default Default value (default: None)
         '''
-        now, exp = time.time(), self._expire_info.get(key)
-        if exp is None:
-            return default
+        values = self._cache.get(key)
+        if values is None: return default
         # Delete if item timed out and return default.
-        elif exp < now:
+        if values[0] < time.time():
             self.delete(key)
             return default
-        else:
-            return self._cache[key]
+        return values[1] 
 
     def set(self, key, value):
         '''Set a value in the cache.
@@ -98,9 +102,8 @@ class SimpleCache(BaseCache):
         '''
         # Cull timed out values if over max # of entries
         if len(self._cache) >= self._max_entries: self._cull()
-        self._cache[key] = value
-        # Set timeout
-        self._expire_info[key] = time.time() + self.timeout
+        # Set value and timeout in cache
+        self._cache[key] = (time.time() + self.timeout, value)
 
     def delete(self, key):
         '''Delete a key from the cache, failing silently.
@@ -110,12 +113,23 @@ class SimpleCache(BaseCache):
         try:
             del self._cache[key]
         except KeyError: pass
-        try:
-            del self._expire_info[key]
-        except KeyError: pass
+
+    def keys(self):
+        '''Returns a list of keys in the cache.'''
+        return self._cache.keys()
 
     def _cull(self):
-        '''Remove items in cache that have timed out.'''
-        now = time.time()
-        for key, exp in self._expire_info.iteritems():
-            if exp < now: self.delete(key)
+        '''Remove items in cache to make room.'''        
+        num, maxcull = 0, self._maxcull
+        # Cull number of items allowed (set by self._maxcull)
+        for key in self.keys():
+            # Remove only maximum # of items allowed by maxcull
+            if num <= maxcull:
+                # Remove items if expired
+                if self.get(key) is None: num += 1
+            else: break
+        # Remove any additional items up to max # of items allowed by maxcull
+        while len(self.keys()) >= self._max_entries and num <= maxcull:
+            # Cull remainder of allowed quota at random
+            self.delete(random.choice(self.keys()))
+            num += 1

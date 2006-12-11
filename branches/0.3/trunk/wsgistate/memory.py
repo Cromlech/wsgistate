@@ -35,6 +35,7 @@ try:
     import threading
 except ImportError:
     import dummy_threading as threading
+from wsgistate import synchronized
 from wsgistate.simple import SimpleCache
 from wsgistate.cache import WsgiMemoize
 from wsgistate.session import CookieSession, URLSession, SessionCache
@@ -73,46 +74,29 @@ class MemoryCache(SimpleCache):
         super(MemoryCache, self).__init__(*a, **kw)
         self._lock = threading.Condition()
         
+    @synchronized        
     def get(self, key, default=None):
-        '''Fetch a given key from the cache.  If the key does not exist, return
+        '''Fetch a given key from the cache. If the key does not exist, return
         default, which itself defaults to None.
 
         @param key Keyword of item in cache.
         @param default Default value (default: None)
         '''
-        self._lock.acquire()
-        try:
-            now, exp = time.time(), self._expire_info.get(key)
-            if exp is None:
-                return default
-            # Return default value if item expired
-            elif exp < now:
-                self.delete(key)
-                return default
-            else:
-                return copy.deepcopy(self._cache[key])
-        finally:
-            self._lock.release()
+        return copy.deepcopy(super(MemoryCache, self).get(key))
 
+    @synchronized
     def set(self, key, value):
         '''Set a value in the cache.  
 
         @param key Keyword of item in cache.
         @param value Value to be inserted in cache.        
         '''
-        self._lock.acquire()
-        try:
-            super(MemoryCache, self).set(key, value)
-        finally:
-            self._lock.release()
+        super(MemoryCache, self).set(key, value)
 
+    @synchronized
     def delete(self, key):
         '''Delete a key from the cache, failing silently.
 
         @param key Keyword of item in cache.
         '''
-        self._lock.acquire()
-        try:
-            super(MemoryCache, self).delete(key)
-        finally:
-            self._lock.release()
+        super(MemoryCache, self).delete(key)

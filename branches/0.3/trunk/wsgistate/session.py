@@ -40,6 +40,7 @@ try:
     import threading
 except ImportError:
     import dummy_threading as threading
+from wsgistate import synchronized
 
 __all__ = ['SessionCache', 'SessionManager', 'CookieSession', 'URLSession',
      'session', 'urlsession']
@@ -73,7 +74,7 @@ class SessionCache(object):
     length = 64
 
     def __init__(self, cache, **kw):
-        self.lock = threading.Condition()
+        self._lock = threading.Condition()
         self.checkedout, self._closed, self.cache = dict(), False, cache
         # Sets if session id is random on every access or not
         self._random = kw.get('random', False)
@@ -87,21 +88,19 @@ class SessionCache(object):
 
     # Public interface.
 
+    @synchronized
     def create(self):
         '''Create a new session with a unique identifier.
         
         The newly-created session should eventually be released by
         a call to checkin().            
         '''
-        self.lock.acquire()
-        try:
-            sid, sess = self.newid(), dict()
-            self.cache.set(sid, sess)            
-            self.checkedout[sid] = sess
-            return sid, sess
-        finally:
-            self.lock.release()
+        sid, sess = self.newid(), dict()
+        self.cache.set(sid, sess)            
+        self.checkedout[sid] = sess
+        return sid, sess
 
+    @synchronized
     def checkout(self, sid):
         '''Checks out a session for use. Returns the session if it exists,
         otherwise returns None. If this call succeeds, the session
@@ -111,50 +110,40 @@ class SessionCache(object):
 
         @param sid Session id        
         '''
-        self.lock.acquire()
-        try:
-            # If we know it's already checked out, block.
-            while sid in self.checkedout: self.lock.wait()
-            sess = self.cache.get(sid)
-            if sess is not None:
-                # Randomize session id if set and remove old session id
-                if self._random:
-                    self.cache.delete(sid)
-                    sid = self.newid()
-                # Put in checkout
-                self.checkedout[sid] = sess
-                return sid, sess
-            return None, None
-        finally:
-            self.lock.release()
+        # If we know it's already checked out, block.
+        while sid in self.checkedout: self._lock.wait()
+        sess = self.cache.get(sid)
+        if sess is not None:
+            # Randomize session id if set and remove old session id
+            if self._random:
+                self.cache.delete(sid)
+                sid = self.newid()
+            # Put in checkout
+            self.checkedout[sid] = sess
+            return sid, sess
+        return None, None
 
+    @synchronized
     def checkin(self, sid, sess):
         '''Returns the session for use by other threads/processes.
 
         @param sid Session id
         @param session Session dictionary
         '''
-        self.lock.acquire()
-        try:
-            del self.checkedout[sid]
-            self.cache.set(sid, sess)
-            self.lock.notify()
-        finally:            
-            self.lock.release()
+        del self.checkedout[sid]
+        self.cache.set(sid, sess)
+        self._lock.notify()
 
+    @synchronized
     def shutdown(self):
-        '''Clean up outstanding sessions.'''
-        self.lock.acquire()
-        try:
-            if not self._closed:
-                # Save or delete any sessions that are still out there.
-                for sid, sess in self.checkedout.iteritems():
-                    self.cache.set(sid, sess)
-                self.checkedout.clear()
-                self.cache._cull()                
-                self._closed = True
-        finally:
-            self.lock.release()
+        '''Clean up outstanding sessions.'''        
+        if not self._closed:
+            # Save or delete any sessions that are still out there.
+            for sid, sess in self.checkedout.iteritems():
+                self.cache.set(sid, sess)
+            self.checkedout.clear()
+            self.cache._cull()                
+            self._closed = True
 
     # Utilities
 

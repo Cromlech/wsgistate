@@ -84,7 +84,7 @@ class TestWsgiState(unittest.TestCase):
         del cache['test']
         self.assertEqual(cache.get('test'), None)
 
-    def test_sc_set_get(self):
+    def test_sc_set_delete(self):
         '''Tests delete on SimpleCache.'''
         cache = simple.SimpleCache()
         cache.set('test', 'test')
@@ -136,7 +136,7 @@ class TestWsgiState(unittest.TestCase):
         del cache['test']
         self.assertEqual(cache.get('test'), None)
 
-    def test_mc_set_get(self):
+    def test_mc_set_delete(self):
         '''Tests delete on MemoryCache.'''
         cache = memory.MemoryCache()
         cache.set('test', 'test')
@@ -188,7 +188,7 @@ class TestWsgiState(unittest.TestCase):
         del cache['test']
         self.assertEqual(cache.get('test'), None)
 
-    def test_fc_set_get(self):
+    def test_fc_set_delete(self):
         '''Tests delete on FileCache.'''
         cache = file.FileCache('test_wsgistate')
         cache.set('test', 'test')
@@ -240,7 +240,7 @@ class TestWsgiState(unittest.TestCase):
         del cache['test']
         self.assertEqual(cache.get('test'), None)
 
-    def test_db_set_get(self):
+    def test_db_set_delete(self):
         '''Tests delete on DbCache.'''
         cache = db.DbCache('sqlite:///:memory:')
         cache.set('test', 'test')
@@ -292,7 +292,7 @@ class TestWsgiState(unittest.TestCase):
         del cache['test']
         self.assertEqual(cache.get('test'), None)
 
-    def test_mcd_set_get(self):
+    def test_mcd_set_delete(self):
         '''Tests delete on MemCache.'''
         cache = memcached.MemCached('localhost')
         cache.set('test', 'test')

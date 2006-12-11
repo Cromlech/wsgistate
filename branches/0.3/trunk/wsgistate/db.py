@@ -82,67 +82,84 @@ class DbCache(BaseCache):
 
     def __init__(self, *a, **kw):
         super(DbCache, self).__init__(self, *a, **kw)
+        # Get table name
+        tablename = kw.get('tablename', 'cache')
         # Bind metadata
         self._metadata = BoundMetaData(a[0])
         # Make cache
-        self._cache = Table('cache', self._metadata,
+        self._cache = Table(tablename, self._metadata,
             Column('id', Integer, primary_key=True, nullable=False, unique=True),
-            Column('cache_key', String(60), nullable=False),
+            Column('key', String(60), nullable=False),
             Column('value', PickleType, nullable=False),
             Column('expires', DateTime, nullable=False))
         # Create cache if it does not exist
         if not self._cache.exists(): self._cache.create()
+        # Maximum number of entries to cull per call if cache is full
+        self._maxcull = kw.get('maxcull', 10)                
         max_entries = kw.get('max_entries', 300)
         try:
             self._max_entries = int(max_entries)
         except (ValueError, TypeError):
             self._max_entries = 300
 
-    def get(self, key, default=None):
+    def __len__(self):
+        return self._cache.count().execute().fetchone()[0]
+
+    def get(self, k, default=None):
         '''Fetch a given key from the cache.  If the key does not exist, return
         default, which itself defaults to None.
 
         @param key Keyword of item in cache.
         @param default Default value (default: None)
         '''
-        row = self._cache.select().execute(cache_key=key).fetchone()
+        row = self._cache.select().execute(key=k).fetchone()
         if row is None: return default
         if row.expires < datetime.now().replace(microsecond=0):
-            self.delete(key)
+            self.delete(k)
             return default
         return row.value
 
-    def set(self, key, val):
+    def set(self, k, v):
         '''Set a value in the cache.
 
         @param key Keyword of item in cache.
-        @param value Value to be inserted in cache.        
+        @param value Value to be inserted in cache.      
         '''
-        
-        timeout = self.timeout
-        # Get count
-        num = self._cache.count().execute().fetchone()[0]
-        if num > self._max_entries: self._cull()
+        if len(self) > self._max_entries: self._cull()
+        timeout, cache = self.timeout, self._cache
         # Get expiration time
         exp = datetime.fromtimestamp(time.time() + timeout).replace(microsecond=0)        
-        try:
-            # Update database if key already present
-            if key in self:
-                self._cache.update(self._cache.c.cache_key==key).execute(value=val, expires=exp)
-            # Insert new key if key not present
-            else:            
-                self._cache.insert().execute(cache_key=key, value=val, expires=exp)
+        #try:
+        # Update database if key already present
+        if k in self:
+            cache.update(cache.c.key==k).execute(value=v, expires=exp)
+        # Insert new key if key not present
+        else:            
+            cache.insert().execute(key=k, value=v, expires=exp)
         # To be threadsafe, updates/inserts are allowed to fail silently
-        except: pass
+        #except: pass
        
-    def delete(self, key):
+    def delete(self, k):
         '''Delete a key from the cache, failing silently.
 
         @param key Keyword of item in cache.
         '''
-        self._cache.delete().execute(cache_key=key) 
+        self._cache.delete(self._cache.c.key==k).execute()
 
     def _cull(self):
-        '''Remove items in cache that have timed out.'''
+        '''Remove items in cache to make more room.'''        
+        cache, maxcull = self._cache, self._maxcull
+        # Remove items that have timed out
         now = datetime.now().replace(microsecond=0)
-        self._cache.delete(self._cache.c.expires < now).execute()
+        cache.delete(cache.c.expires < now).execute()
+        # Remove any items over the maximum allowed number in the cache
+        if len(self) >= self._max_entries:
+            # Upper limit for key query
+            ul = maxcull * 2
+            # Get list of keys
+            keys = [i[0] for i in select([cache.c.key], limit=ul).execute().fetchall()]
+            # Get some keys at random
+            delkeys = list(random.choice(keys) for i in range(maxcull))
+            # Delete keys
+            fkeys = tuple({'key':k} for k in delkeys)
+            cache.delete(cache.c.key.in_(bindparam('key'))).execute(*fkeys)
