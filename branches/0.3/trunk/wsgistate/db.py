@@ -36,7 +36,7 @@ try:
 except ImportError:
     raise ImportError('DbCache module requires the SQLAlchemy package ' \
         'from http://www.sqlalchemy.org/')
-from wsgistate.base import BaseCache
+from wsgistate import BaseCache
 from wsgistate.cache import WsgiMemoize
 from wsgistate.session import CookieSession, URLSession, SessionCache
 

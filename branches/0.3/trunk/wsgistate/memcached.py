@@ -33,7 +33,7 @@ try:
     import memcache
 except ImportError:
     raise ImportError("Memcached cache backend requires the 'memcache' library")
-from wsgistate.base import BaseCache
+from wsgistate import BaseCache
 from wsgistate.cache import WsgiMemoize
 from wsgistate.session import CookieSession, URLSession, SessionCache
 

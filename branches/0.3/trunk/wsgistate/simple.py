@@ -30,7 +30,7 @@
 '''Single-process in-memory cache backend.'''
 
 import time
-from wsgistate.base import BaseCache
+from wsgistate import BaseCache
 from wsgistate.cache import WsgiMemoize
 from wsgistate.session import CookieSession, URLSession, SessionCache
 
