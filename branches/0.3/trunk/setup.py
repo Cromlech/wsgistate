@@ -40,14 +40,11 @@ setup(name='wsgistate',
       long_description='''Session (flup-compatible), caching, memoizing, and HTTP cache control
 middleware for WSGI. Supports memory, filesystem, database, and memcached based backends.
 
-Simple memoization example:
+# Simple memoization example:
 
-from wsgistate.memory import MemoryCache
-from wsgistate.cache import memoize
+from wsgistate.memory import memoize
 
-cache = MemoryCache()
-
-@memoize(cache)
+@memoize()
 def app(environ, start_response):
     start_response('200 OK', [('Content-Type', 'text/plain')])
     return ['Hello World!']
@@ -57,14 +54,11 @@ if __name__ == '__main__':
     http = make_server('', 8080, app)
     http.serve_forever()
 
-Simple session example:
+# Simple session example:
 
-from wsgistate.memory import MemoryCache
-from wsgistate.session import session, SessionCache
+from wsgistate.memory import session
 
-cache = MemoryCache()
-
-@session(SessionCache(cache))
+@session()
 def app(environ, start_response):
     session = environ['com.saddi.service.session'].session
     count = session.get('count', 0) + 1
@@ -83,7 +77,7 @@ if __name__ == '__main__':
       test_suite='wsgistate.tests',
       zip_safe = True,
       keywords='WSGI session caching persistence memoizing HTTP Web',
-      classifiers=['Development Status :: 3 - Alpha',
+      classifiers=['Development Status :: 4 - Beta',
                     'Environment :: Web Environment',
                     'License :: OSI Approved :: BSD License',
                     'Natural Language :: English',
