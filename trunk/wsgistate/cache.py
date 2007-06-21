@@ -28,83 +28,208 @@
 
 '''WSGI middleware for caching.'''
 
-import cgi, marshal
+import time
+import rfc822
+from copy import copy
 
+__all__ = ['WsgiMemoize', 'CacheHeader', 'memoize', 'public', 'private',
+    'nocache', 'nostore', 'notransform', 'revalidate', 'proxyrevalidate',
+    'maxage', 'smaxage', 'vary', 'modified']
 
-class WsgiCache(object):
+def expiredate(seconds, value):
+    '''Expire date headers for cache control.
 
-    '''WSGI middleware for caching.'''  
+    @param seconds Seconds
+    @param value Value for Cache-Control header
+    '''
+    now = time.time()
+    return {'Cache-Control':value % seconds, 'Date':rfc822.formatdate(now),
+        'Expires':rfc822.formatdate(now + seconds)}
 
-    def __init__(self, app, cache, **kw):
-        '''Init method.'''
-        super(WsgiCache, self).__init__()
-        self.application, self._cache = app, cache
-        # Adds method to cache key
-        self._methidx = kw.get('index_methods', False)
-        # Adds user submitted data (GET, POST) to cache key
-        self._useridx = kw.get('index_user_info', False)
-        # Which HTTP responses by method are cached
-        self._allowed = kw.get('allowed_methods', set(['GET', 'HEAD']))
-        # Responses to user submitted data (GET, POST) is cached
-        self._usersub = kw.get('cache_user_info', False)
-        
-    def __call__(self, environ, start_response):
-        '''Caches responses to HTTP requests.'''
-        key = self._keygen(environ)
-        cached = self._cache.get(key)      
-        # Cache if data not cached
-        try:
-            data = cached['data']
-            start_response(cached['status'], cached['headers'], cached['exc_info'])
-        except TypeError:
-            if self._cacheable(environ):                
-                sr = _CacheResponse(start_response, key, self._cache)
-                data = self.application(environ, sr.cache_start_response)
-                self._cache[key]['data'] = data
-            else:
-                data = self.application(environ, start_response)                
-        return data
-
-    def _keygen(self, environ):
-        '''Generates cache keys.'''
-        # Base of key is alwasy path of request
-        key = environ['PATH_INFO']
-        # Add method name to key if configured that way
-        if self._methidx: key = ''.join([key, environ['REQUEST_METHOD']])
-        # Add marshalled user submitted data to string if configured that way
-        if self._useridx:
-            qdict = cgi.parse(environ['wsgi.input'], environ, False, False)
-            key = ''.join([key, marshal.dumps(qdict)])
-        return key
-    
-    def _cacheable(self, environ):
-        '''Tells if a request should be cached or not.'''
-        # Returns false if method is not to be cached
-        if environ['REQUEST_METHOD'] not in self._allowed: return False
-        # Returns false if requests based on user submissions are not to be cached
-        if self._usersub:
-            if 'QUERY_STRING' in environ: return False
-            if environ['REQUEST_METHOD'] == 'POST': return False
-        return True
-
-
-class _CacheResponse(object):
-
-    def __init__(self, start_response, key, cache):
-        self._start_response = start_response
-        self._cache, self._key = cache, key
-
-    def cache_start_response(self, status, headers, exc_info=None):
-        cachedict = dict((('status', status), ('headers', headers), ('exc_info', exc_info)))
-        self._cache.set(self._key, cachedict)
-        return self._start_response(status, headers, exc_info)
-
-
-def cache(cache, **kw):
-    '''Decorator for simple cache.'''
+def memoize(cache, **kw):
+    '''Decorator for caching.'''
     def decorator(application):
-        return WsgiCache(application, cache, **kw)
+        return WsgiMemoize(application, cache, **kw)
+    return decorator
+
+def control(application, value):
+    '''Generic setter for 'Cache-Control' headers.
+
+    @param application WSGI application
+    @param value 'Cache-Control' value
+    '''
+    headers = {'Cache-Control':value}
+    return CacheHeader(application, headers)
+
+def expire(application, value):
+    '''Generic setter for 'Cache-Control' headers + expiration info.
+
+    @param application WSGI application
+    @param value 'Cache-Control' value
+    '''    
+    now = rfc822.formatdate()
+    headers = {'Cache-Control':value, 'Date':now, 'Expires':now}
+    return CacheHeader(application, headers)
+
+def age(value, second):
+    '''Generic setter for 'Cache-Control' headers + future expiration info.
+
+    @param value 'Cache-Control' value
+    @param seconds # of seconds a resource should be considered invalid in   
+    '''
+    def decorator(application):
+        return CacheHeader(application, expiredate(second, value))
+    return decorator
+
+def public(application):
+    '''Response MAY be cached.'''
+    return control(application, 'public')
+    
+def private(application):
+    '''Response intended for 1 user that MUST NOT be cached.'''
+    return expire(application, 'private')
+    
+def nocache(application):
+    '''Response that a cache can't send without origin server revalidation.'''
+    now = rfc822.formatdate()
+    headers = {'Cache-Control':'no-cache', 'Pragma':'no-cache', 'Date':now,
+        'Expires':now}
+    return CacheHeader(application, headers)
+
+def nostore(application):
+    '''Response that MUST NOT be cached.'''
+    return expire(application, 'no-store')
+
+def notransform(application):
+    '''A cache must not modify the Content-Location, Content-MD5, ETag,
+    Last-Modified, Expires, Content-Encoding, Content-Range, and Content-Type
+    headers.
+    '''
+    return control(application, 'no-transform')
+
+def revalidate(application):
+    '''A cache must revalidate a response with the origin server.'''
+    return control(application, 'must-revalidate')
+
+def proxyrevalidate(application):
+    '''Shared caches must revalidate a response with the origin server.'''
+    return control(application, 'proxy-revalidate')
+
+def maxage(seconds):
+    '''Sets the maximum time in seconds a response can be cached.'''
+    return age('max-age=%d', seconds)
+
+def smaxage(seconds):
+    '''Sets the maximum time in seconds a shared cache can store a response.''' 
+    return age('s-maxage=%d', seconds)
+
+def expires(seconds):
+    '''Sets the time a response expires from the cache (HTTP 1.0).'''
+    headers = {'Expires':rfc822.formatdate(time.time() + seconds)}
+    def decorator(application):
+        return CacheHeader(application, headers)
+    return decorator
+
+def vary(headers):
+    '''Sets which fields allow a cache to use a response without revalidation.'''
+    headers = {'Vary':', '.join(headers)}
+    def decorator(application):
+        return CacheHeader(application, headers)
+    return decorator
+
+def modified(seconds=None):
+    '''Sets the time a response was modified.'''
+    headers = {'Modified':rfc822.formatdate(seconds)}
+    def decorator(application):
+        return CacheHeader(application, headers)
     return decorator
 
 
-__all__ = ['WsgiCache', 'cache']   
+class CacheHeader(object):
+
+    '''Controls HTTP Cache Control headers.'''
+
+    def __init__(self, application, headers):
+        self.application = application
+        self.headers = headers
+        
+    def __call__(self, environ, start_response):
+        # Restrict cache control to GET and HEAD per HTTP 1.1 RFC
+        if environ.get('REQUEST_METHOD') in ('GET', 'HEAD'):
+            # Co-routine to add cache control headers
+            def hdr_response(status, headers, exc_info=None):
+                theaders = self.headers.copy()
+                # Aggregate all 'Cache-Control' directives
+                if 'Cache-Control' in theaders:                    
+                    for idx, i in enumerate(headers):
+                        if i[0] != 'Cache-Control': continue
+                        curval = theaders.pop('Cache-Control')
+                        newval = ', '.join([curval, i[1]])
+                        headers.append(('Cache-Control', newval))
+                        del headers[idx]
+                        break
+                headers.extend((k, v) for k, v in theaders.iteritems())
+                return start_response(status, headers, exc_info)
+            return self.application(environ, hdr_response)
+        return self.application(environ, start_response)
+        
+
+class WsgiMemoize(object):
+
+    '''WSGI middleware for response memoizing.'''
+
+    def __init__(self, app, cache, **kw):
+        self.application, self._cache = app, cache
+        # Adds method to cache key
+        self._methkey = kw.get('key_methods', False)
+        # Adds user submitted data to cache key
+        self._userkey = kw.get('key_user_info', False)
+        # Which HTTP responses by method are cached
+        self._allowed = kw.get('allowed_methods', set(['GET', 'HEAD']))
+        
+    def __call__(self, environ, start_response):
+        # Generate cache key
+        key = self._keygen(environ)
+        # Query cache for key prescence
+        info = self._cache.get(key)
+        # Return cached data
+        if info is not None:
+            start_response(info['status'], info['headers'], info['exc_info'])
+            return info['data']
+        # Verify requested response is cacheable
+        if environ['REQUEST_METHOD'] in self._allowed:
+            # Cache start_response info
+            def cache_response(status, headers, exc_info=None):
+                # Add HTTP cache control headers
+                newhdrs = expiredate(self._cache.timeout, 's-maxage=%d')
+                headers.extend((k, v) for k, v in newhdrs.iteritems())
+                cachedict = {'status':status, 'headers':headers, 'exc_info':exc_info}
+                self._cache.set(key, cachedict)
+                return start_response(status, headers, exc_info)            
+            # Wrap data in list to trigger iterator (Roberto De Alemeida)
+            data = list(self.application(environ, cache_response))
+            # Fetch cached dictionary
+            info = self._cache.get(key)
+            # Store in dictionary
+            info['data'] = data
+            # Store in cache
+            self._cache.set(key, info)
+            # Return data as response to intial request
+            return data
+        return self.application(environ, start_response)
+
+    def _keygen(self, environ):
+        '''Generates cache keys.'''
+        # Base of key is always path of request
+        key = [environ['PATH_INFO']]
+        # Add method name to key if configured that way
+        if self._methkey: key.append(environ['REQUEST_METHOD'])
+        # Add user submitted data to string if configured that way
+        if self._userkey:
+            qs = environ.get('QUERY_STRING', '')            
+            if qs != '':
+                key.append(qs)
+            else:
+                win = copy(environ['wsgi.input']).read()
+                if win != '': key.append(win)
+        return ''.join(key)

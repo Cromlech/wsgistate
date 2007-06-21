@@ -35,7 +35,35 @@ try:
     import threading
 except ImportError:
     import dummy_threading as threading
-from simple import SimpleCache
+from wsgistate import synchronized
+from wsgistate.simple import SimpleCache
+from wsgistate.cache import WsgiMemoize
+from wsgistate.session import CookieSession, URLSession, SessionCache
+
+__all__ = ['MemoryCache', 'memoize', 'session', 'urlsession']
+
+def memoize(**kw):
+    '''Decorator for caching.'''
+    def decorator(application):
+        _mem_memo_cache = MemoryCache(**kw)
+        return WsgiMemoize(application, _mem_memo_cache, **kw)
+    return decorator
+
+def session(**kw):
+    '''Decorator for sessions.'''
+    def decorator(application):
+        _mem_base_cache = MemoryCache(**kw)
+        _mem_session_cache = SessionCache(_mem_base_cache, **kw)
+        return CookieSession(application, _mem_session_cache, **kw)
+    return decorator
+
+def urlsession(**kw):
+    '''Decorator for URL encoded sessions.'''
+    def decorator(application):
+        _mem_ubase_cache = MemoryCache(**kw)
+        _mem_url_cache = SessionCache(_mem_ubase_cache, **kw)
+        return URLSession(application, _mem_url_cache, **kw)
+    return decorator
 
 
 class MemoryCache(SimpleCache):
@@ -43,53 +71,32 @@ class MemoryCache(SimpleCache):
     '''Thread-safe in-memory cache backend.'''    
 
     def __init__(self, *a, **kw):
-        '''Init method.'''
         super(MemoryCache, self).__init__(*a, **kw)
         self._lock = threading.Condition()
         
+    @synchronized        
     def get(self, key, default=None):
-        '''Fetch a given key from the cache.  If the key does not exist, return
+        '''Fetch a given key from the cache. If the key does not exist, return
         default, which itself defaults to None.
 
         @param key Keyword of item in cache.
         @param default Default value (default: None)
         '''
-        self._lock.acquire()
-        try:
-            now, exp = time.time(), self._expire_info.get(key)
-            if exp is None:
-                return default
-            # Return default value if item expired
-            elif exp < now:
-                self.delete(key)
-                return default
-            else:
-                return copy.deepcopy(self._cache[key])
-        finally:
-            self._lock.release()
+        return copy.deepcopy(super(MemoryCache, self).get(key))
 
+    @synchronized
     def set(self, key, value):
         '''Set a value in the cache.  
 
         @param key Keyword of item in cache.
         @param value Value to be inserted in cache.        
         '''
-        self._lock.acquire()
-        try:
-            super(MemoryCache, self).set(key, value)
-        finally:
-            self._lock.release()
+        super(MemoryCache, self).set(key, value)
 
+    @synchronized
     def delete(self, key):
         '''Delete a key from the cache, failing silently.
 
         @param key Keyword of item in cache.
         '''
-        self._lock.acquire()
-        try:
-            super(MemoryCache, self).delete(key)
-        finally:
-            self._lock.release()
-        
-
-__all__ = ['MemoryCache']
+        super(MemoryCache, self).delete(key)

@@ -33,7 +33,44 @@ try:
     import memcache
 except ImportError:
     raise ImportError("Memcached cache backend requires the 'memcache' library")
-from base import BaseCache
+from wsgistate import BaseCache
+from wsgistate.cache import WsgiMemoize
+from wsgistate.session import CookieSession, URLSession, SessionCache
+
+__all__ = ['MemCached', 'memoize', 'session', 'urlsession']
+
+
+def memoize(path, **kw):
+    '''Decorator for caching.
+
+    @param path Client path
+    '''
+    def decorator(application):
+        _mc_memo_cache = MemCached(path, **kw)
+        return WsgiMemoize(application, _mc_memo_cache, **kw)
+    return decorator
+
+def session(path, **kw):
+    '''Decorator for sessions.
+
+    @param path Client path
+    '''
+    def decorator(application):
+        _mc_base_cache = MemCached(path, **kw)
+        _mc_session_cache = SessionCache(_mc_base_cache, **kw)
+        return CookieSession(application, _mc_session_cache, **kw)
+    return decorator
+
+def urlsession(path, **kw):
+    '''Decorator for URL encoded sessions.
+
+    @param path Client path
+    '''
+    def decorator(application):
+        _mc_ubase_cache = MemCached(path, **kw)
+        _mc_url_cache = SessionCache(_mc_ubase_cache, **kw)
+        return URLSession(application, _mc_url_cache, **kw)
+    return decorator
 
 
 class MemCached(BaseCache):
@@ -52,10 +89,8 @@ class MemCached(BaseCache):
         @param default Default value (default: None)
         '''
         val = self._cache.get(key)
-        if val is None:
-            return default
-        else:
-            return val
+        if val is None: return default
+        return val
 
     def set(self, key, value):
         '''Set a value in the cache.
@@ -63,7 +98,7 @@ class MemCached(BaseCache):
         @param key Keyword of item in cache.
         @param value Value to be inserted in cache.        
         '''
-        self._cache.set(key, value, self.default_timeout)
+        self._cache.set(key, value, self.timeout)
 
     def delete(self, key):
         '''Delete a key from the cache, failing silently.
@@ -85,6 +120,3 @@ class MemCached(BaseCache):
     def _cull(self):
         '''Stub.'''
         pass
-       
-
-__all__ = ['MemCached']

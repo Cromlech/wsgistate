@@ -35,20 +35,53 @@ except:
     from distutils.core import setup
 
 setup(name='wsgistate',
-      version='0.1',
-      description='''Session and caching middleware for WSGI.''',
-      long_description='''flup-compatible session and caching middleware for WSGI.
-      Includes support for thread-safe in-memory, disk-based, database, and memcached caches.''',
+      version='0.4.1',
+      description='''WSGI session and caching middleware.''',
+      long_description='''Session (flup-compatible), caching, memoizing, and HTTP cache control
+middleware for WSGI. Supports memory, filesystem, database, and memcached based backends.
+
+# Simple memoization example:
+
+from wsgistate.memory import memoize
+
+@memoize()
+def app(environ, start_response):
+    start_response('200 OK', [('Content-Type', 'text/plain')])
+    return ['Hello World!']
+
+if __name__ == '__main__':
+    from wsgiref.simple_server import make_server
+    http = make_server('', 8080, app)
+    http.serve_forever()
+
+# Simple session example:
+
+from wsgistate.memory import session
+
+@session()
+def app(environ, start_response):
+    session = environ['com.saddi.service.session'].session
+    count = session.get('count', 0) + 1
+    session['count'] = count
+    start_response('200 OK', [('Content-Type', 'text/plain')])
+    return ['You have been here %d times!\n' % count]
+
+if __name__ == '__main__':
+    from wsgiref.simple_server import make_server
+    http = make_server('', 8080, app)
+    http.serve_forever()''',
       author='L. C. Rees',
       author_email='lcrees@gmail.com',
       license='BSD',
       packages = ['wsgistate'],
+      test_suite='wsgistate.tests',
       zip_safe = True,
-      keywords='WSGI session caching persistence HTTP Web',
-      classifiers=['Development Status :: 3 - Alpha',
+      keywords='WSGI session caching persistence memoizing HTTP Web',
+      classifiers=['Development Status :: 4 - Beta',
                     'Environment :: Web Environment',
                     'License :: OSI Approved :: BSD License',
                     'Natural Language :: English',
                     'Operating System :: OS Independent',
                     'Programming Language :: Python',
-                    'Topic :: Internet :: WWW/HTTP :: WSGI :: Middleware'])
+                    'Topic :: Internet :: WWW/HTTP :: WSGI :: Middleware'],
+      install_requires = ['SQLAlchemy'],)
