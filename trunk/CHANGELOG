@@ -1,0 +1,4 @@
+Changes between 0.4 and 0.4.1
+
+- only caches explicitly declared HTTP methods (Roberto De Alemeida)
+- non-destructively consumes 'wsgi.input' (Roberto De Alemeida)
