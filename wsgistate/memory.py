@@ -6,10 +6,10 @@
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
 #
-#    1. Redistributions of source code must retain the above copyright notice, 
+#    1. Redistributions of source code must retain the above copyright notice,
 #       this list of conditions and the following disclaimer.
-#    
-#    2. Redistributions in binary form must reproduce the above copyright 
+#
+#    2. Redistributions in binary form must reproduce the above copyright
 #       notice, this list of conditions and the following disclaimer in the
 #       documentation and/or other materials provided with the distribution.
 #
@@ -35,12 +35,39 @@ try:
     import threading
 except ImportError:
     import dummy_threading as threading
+
 from wsgistate import synchronized
 from wsgistate.simple import SimpleCache
 from wsgistate.cache import WsgiMemoize
 from wsgistate.session import CookieSession, URLSession, SessionCache
 
 __all__ = ['MemoryCache', 'memoize', 'session', 'urlsession']
+
+def memorymemo_deploy(global_conf, **kw):
+    '''Paste Deploy loader for caching.'''
+    def decorator(application):
+        _memory_memo_cache = MemoryCache(kw.get('cache'), **kw)
+        return WsgiMemoize(application, _memory_memo_cache, **kw)
+    return decorator
+
+def memorysess_deploy(global_conf, **kw):
+    '''Paste Deploy loader for sessions.'''
+    def decorator(application):
+        _memory_base_cache = MemoryCache(kw.get('cache'), **kw)
+        _memory_session_cache = SessionCache(_memory_base_cache, **kw)
+        return CookieSession(application, _memory_session_cache, **kw)
+    return decorator
+
+def memoryurlsess_deploy(global_conf, **kw):
+    '''Paste Deploy loader for URL encoded sessions.
+
+    @param initstr Database initialization string
+    '''
+    def decorator(application):
+        _memory_ubase_cache = MemoryCache(kw.get('cache'), **kw)
+        _memory_url_cache = SessionCache(_memory_ubase_cache, **kw)
+        return URLSession(application, _memory_url_cache, **kw)
+    return decorator
 
 def memoize(**kw):
     '''Decorator for caching.'''
@@ -68,13 +95,13 @@ def urlsession(**kw):
 
 class MemoryCache(SimpleCache):
 
-    '''Thread-safe in-memory cache backend.'''    
+    '''Thread-safe in-memory cache backend.'''
 
     def __init__(self, *a, **kw):
         super(MemoryCache, self).__init__(*a, **kw)
         self._lock = threading.Condition()
-        
-    @synchronized        
+
+    @synchronized
     def get(self, key, default=None):
         '''Fetch a given key from the cache. If the key does not exist, return
         default, which itself defaults to None.
@@ -86,10 +113,10 @@ class MemoryCache(SimpleCache):
 
     @synchronized
     def set(self, key, value):
-        '''Set a value in the cache.  
+        '''Set a value in the cache.
 
         @param key Keyword of item in cache.
-        @param value Value to be inserted in cache.        
+        @param value Value to be inserted in cache.
         '''
         super(MemoryCache, self).set(key, value)
 

@@ -4,10 +4,10 @@
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
 #
-#    1. Redistributions of source code must retain the above copyright notice, 
+#    1. Redistributions of source code must retain the above copyright notice,
 #       this list of conditions and the following disclaimer.
-#    
-#    2. Redistributions in binary form must reproduce the above copyright 
+#
+#    2. Redistributions in binary form must reproduce the above copyright
 #       notice, this list of conditions and the following disclaimer in the
 #       documentation and/or other materials provided with the distribution.
 #
@@ -33,17 +33,18 @@ import StringIO
 import copy
 import os
 import time
-from wsgistate import *
 import urlparse
+
+from wsgistate import *
 
 
 class TestWsgiState(unittest.TestCase):
-    
+
     '''Test cases for wsgistate.'''
-        
+
     def dummy_sr(self, status, headers, exc_info=None):
         return headers
-    
+
     def my_app(self, environ, start_response):
         session = environ['com.saddi.service.session'].session
         count = session.get('count', 0) + 1
@@ -67,269 +68,272 @@ class TestWsgiState(unittest.TestCase):
 
     def test_sc_set_getitem(self):
         '''Tests __setitem__ and __setitem__ on SimpleCache.'''
-        cache = simple.SimpleCache()
-        cache['test'] = 'test'
-        self.assertEqual(cache['test'], 'test')
+        testcache = simple.SimpleCache()
+        testcache['test'] = 'test'
+        self.assertEqual(testcache['test'], 'test')
 
     def test_sc_set_get(self):
         '''Tests set and get on SimpleCache.'''
-        cache = simple.SimpleCache()
-        cache.set('test', 'test')
-        self.assertEqual(cache.get('test'), 'test')
+        testcache = simple.SimpleCache()
+        testcache.set('test', 'test')
+        self.assertEqual(testcache.get('test'), 'test')
 
     def test_sc_delitem(self):
         '''Tests __delitem__ on SimpleCache.'''
-        cache = simple.SimpleCache()
-        cache['test'] = 'test'
-        del cache['test']
-        self.assertEqual(cache.get('test'), None)
+        testcache = simple.SimpleCache()
+        testcache['test'] = 'test'
+        del testcache['test']
+        self.assertEqual(testcache.get('test'), None)
 
     def test_sc_set_delete(self):
         '''Tests delete on SimpleCache.'''
-        cache = simple.SimpleCache()
-        cache.set('test', 'test')
-        cache.delete('test')
-        self.assertEqual(cache.get('test'), None)
+        testcache = simple.SimpleCache()
+        testcache.set('test', 'test')
+        testcache.delete('test')
+        self.assertEqual(testcache.get('test'), None)
 
     def test_set_getmany(self):
         '''Tests delete on SimpleCache.'''
-        cache = simple.SimpleCache()
-        cache.set('test', 'test')
-        cache.set('test2', 'test2')
-        self.assertEqual(sorted(cache.get_many(('test', 'test2')).values()), ['test', 'test2'])
+        testcache = simple.SimpleCache()
+        testcache.set('test', 'test')
+        testcache.set('test2', 'test2')
+        self.assertEqual(sorted(testcache.get_many(('test', 'test2')).values()), ['test', 'test2'])
 
     def test_sc_in_true(self):
         '''Tests in (true) on SimpleCache.'''
-        cache = simple.SimpleCache()
-        cache.set('test', 'test')
-        self.assertEqual('test' in cache, True)
+        testcache = simple.SimpleCache()
+        testcache.set('test', 'test')
+        self.assertEqual('test' in testcache, True)
 
     def test_sc_in_false(self):
         '''Tests in (false) on SimpleCache.'''
-        cache = simple.SimpleCache()
-        cache.set('test2', 'test')
-        self.assertEqual('test' in cache, False)
+        testcache = simple.SimpleCache()
+        testcache.set('test2', 'test')
+        self.assertEqual('test' in testcache, False)
 
     def test_sc_timeout(self):
         '''Tests timeout in SimpleCache.'''
-        cache = simple.SimpleCache(timeout=1)
-        cache.set('test', 'test')
+        testcache = simple.SimpleCache(timeout=1)
+        testcache.set('test', 'test')
         time.sleep(1)
-        self.assertEqual(cache.get('test'), None)        
+        self.assertEqual(testcache.get('test'), None)
 
     def test_mc_set_getitem(self):
         '''Tests __setitem__ and __setitem__ on MemoryCache.'''
-        cache = memory.MemoryCache()
-        cache['test'] = 'test'
-        self.assertEqual(cache['test'], 'test')
+        testcache = memory.MemoryCache()
+        testcache['test'] = 'test'
+        self.assertEqual(testcache['test'], 'test')
 
     def test_mc_set_get(self):
         '''Tests set and get on MemoryCache.'''
-        cache = memory.MemoryCache()
-        cache.set('test', 'test')
-        self.assertEqual(cache.get('test'), 'test')
+        testcache = memory.MemoryCache()
+        testcache.set('test', 'test')
+        self.assertEqual(testcache.get('test'), 'test')
 
     def test_mc_delitem(self):
         '''Tests __delitem__ on MemoryCache.'''
-        cache = memory.MemoryCache()
-        cache['test'] = 'test'
-        del cache['test']
-        self.assertEqual(cache.get('test'), None)
+        testcache = memory.MemoryCache()
+        testcache['test'] = 'test'
+        del testcache['test']
+        self.assertEqual(testcache.get('test'), None)
 
     def test_mc_set_delete(self):
         '''Tests delete on MemoryCache.'''
-        cache = memory.MemoryCache()
-        cache.set('test', 'test')
-        cache.delete('test')
-        self.assertEqual(cache.get('test'), None)
+        testcache = memory.MemoryCache()
+        testcache.set('test', 'test')
+        testcache.delete('test')
+        self.assertEqual(testcache.get('test'), None)
 
     def test_mc_set_getmany(self):
         '''Tests delete on MemoryCache.'''
-        cache = memory.MemoryCache()
-        cache.set('test', 'test')
-        cache.set('test2', 'test2')
-        self.assertEqual(sorted(cache.get_many(('test', 'test2')).values()), ['test', 'test2'])
+        testcache = memory.MemoryCache()
+        testcache.set('test', 'test')
+        testcache.set('test2', 'test2')
+        self.assertEqual(sorted(testcache.get_many(('test', 'test2')).values()), ['test', 'test2'])
 
     def test_mc_in_true(self):
         '''Tests in (true) on MemoryCache.'''
-        cache = memory.MemoryCache()
-        cache.set('test', 'test')
-        self.assertEqual('test' in cache, True)
+        testcache = memory.MemoryCache()
+        testcache.set('test', 'test')
+        self.assertEqual('test' in testcache, True)
 
     def test_mc_in_false(self):
         '''Tests in (false) on MemoryCache.'''
-        cache = memory.MemoryCache()
-        cache.set('test2', 'test')
-        self.assertEqual('test' in cache, False)
+        testcache = memory.MemoryCache()
+        testcache.set('test2', 'test')
+        self.assertEqual('test' in testcache, False)
 
     def test_mc_timeout(self):
         '''Tests timeout in MemoryCache.'''
-        cache = memory.MemoryCache(timeout=1)
-        cache.set('test', 'test')
+        testcache = memory.MemoryCache(timeout=1)
+        testcache.set('test', 'test')
         time.sleep(1)
-        self.assertEqual(cache.get('test'), None)           
+        self.assertEqual(testcache.get('test'), None)
 
     def test_fc_set_getitem(self):
         '''Tests __setitem__ and __setitem__ on FileCache.'''
-        cache = file.FileCache('test_wsgistate')
-        cache['test'] = 'test'
-        self.assertEqual(cache['test'], 'test')
+        testcache = file.FileCache('test_wsgistate')
+        testcache['test'] = 'test'
+        self.assertEqual(testcache['test'], 'test')
 
     def test_fc_set_get(self):
         '''Tests set and get on FileCache.'''
-        cache = file.FileCache('test_wsgistate')
-        cache.set('test', 'test')
-        self.assertEqual(cache.get('test'), 'test')
+        testcache = file.FileCache('test_wsgistate')
+        testcache.set('test', 'test')
+        self.assertEqual(testcache.get('test'), 'test')
 
     def test_fc_delitem(self):
         '''Tests __delitem__ on FileCache.'''
-        cache = file.FileCache('test_wsgistate')
-        cache['test'] = 'test'
-        del cache['test']
-        self.assertEqual(cache.get('test'), None)
+        testcache = file.FileCache('test_wsgistate')
+        testcache['test'] = 'test'
+        del testcache['test']
+        self.assertEqual(testcache.get('test'), None)
 
     def test_fc_set_delete(self):
         '''Tests delete on FileCache.'''
-        cache = file.FileCache('test_wsgistate')
-        cache.set('test', 'test')
-        cache.delete('test')
-        self.assertEqual(cache.get('test'), None)
+        testcache = file.FileCache('test_wsgistate')
+        testcache.set('test', 'test')
+        testcache.delete('test')
+        self.assertEqual(testcache.get('test'), None)
 
     def test_fc_set_getmany(self):
         '''Tests delete on FileCache.'''
-        cache = file.FileCache('test_wsgistate')
-        cache.set('test', 'test')
-        cache.set('test2', 'test2')
-        self.assertEqual(sorted(cache.get_many(('test', 'test2')).values()), ['test', 'test2'])
+        testcache = file.FileCache('test_wsgistate')
+        testcache.set('test', 'test')
+        testcache.set('test2', 'test2')
+        self.assertEqual(sorted(testcache.get_many(('test', 'test2')).values()), ['test', 'test2'])
 
     def test_fc_in_true(self):
         '''Tests in (true) on FileCache.'''
-        cache = file.FileCache('test_wsgistate')
-        cache.set('test', 'test')
-        self.assertEqual('test' in cache, True)
+        testcache = file.FileCache('test_wsgistate')
+        testcache.set('test', 'test')
+        self.assertEqual('test' in testcache, True)
 
     def test_fc_in_false(self):
         '''Tests in (false) on FileCache.'''
-        cache = file.FileCache('test_wsgistate')
-        cache.set('test2', 'test')
-        self.assertEqual('test' in cache, False)
+        testcache = file.FileCache('test_wsgistate')
+        testcache.set('test2', 'test')
+        self.assertEqual('test' in testcache, False)
 
     def test_fc_timeout(self):
         '''Tests timeout in FileCache.'''
-        cache = file.FileCache('test_wsgistate', timeout=1)
-        cache.set('test', 'test')
+        testcache = file.FileCache('test_wsgistate', timeout=1)
+        testcache.set('test', 'test')
         time.sleep(1)
-        self.assertEqual(cache.get('test'), None)           
-    
+        self.assertEqual(testcache.get('test'), None)
+
     def test_db_set_getitem(self):
         '''Tests __setitem__ and __setitem__ on DbCache.'''
-        cache = db.DbCache('sqlite:///:memory:')
-        cache['test'] = 'test'
-        self.assertEqual(cache['test'], 'test')
+        testcache = db.DbCache('sqlite://')
+        testcache['test'] = 'test'
+        self.assertEqual(testcache['test'], 'test')
 
     def test_db_set_get(self):
         '''Tests set and get on DbCache.'''
-        cache = db.DbCache('sqlite:///:memory:')
-        cache.set('test', 'test')
-        self.assertEqual(cache.get('test'), 'test')
+        testcache = db.DbCache('sqlite://')
+        testcache.set('test', 'test')
+        self.assertEqual(testcache.get('test'), 'test')
 
     def test_db_delitem(self):
         '''Tests __delitem__ on DbCache.'''
-        cache = db.DbCache('sqlite:///:memory:')
-        cache['test'] = 'test'
-        del cache['test']
-        self.assertEqual(cache.get('test'), None)
+        testcache = db.DbCache('sqlite://')
+        testcache['test'] = 'test'
+        del testcache['test']
+        self.assertEqual(testcache.get('test'), None)
 
     def test_db_set_delete(self):
         '''Tests delete on DbCache.'''
-        cache = db.DbCache('sqlite:///:memory:')
-        cache.set('test', 'test')
-        cache.delete('test')
-        self.assertEqual(cache.get('test'), None)
+        testcache = db.DbCache('sqlite://')
+        testcache.set('test', 'test')
+        testcache.delete('test')
+        self.assertEqual(testcache.get('test'), None)
 
     def test_db_set_getmany(self):
         '''Tests delete on DbCache.'''
-        cache = db.DbCache('sqlite:///:memory:')
-        cache.set('test', 'test')
-        cache.set('test2', 'test2')
-        self.assertEqual(sorted(cache.get_many(('test', 'test2')).values()), ['test', 'test2'])
+        testcache = db.DbCache('sqlite://')
+        testcache.set('test', 'test')
+        testcache.set('test2', 'test2')
+        self.assertEqual(
+            sorted(testcache.get_many(('test', 'test2'))),
+                ['test', 'test2']
+        )
 
     def test_db_in_true(self):
         '''Tests in (true) on DbCache.'''
-        cache = db.DbCache('sqlite:///:memory:')
-        cache.set('test', 'test')
-        self.assertEqual('test' in cache, True)
+        testcache = db.DbCache('sqlite://')
+        testcache.set('test', 'test')
+        self.assertEqual('test' in testcache, True)
 
     def test_db_in_false(self):
         '''Tests in (false) on DbCache.'''
-        cache = db.DbCache('sqlite:///:memory:')
-        cache.set('test2', 'test')
-        self.assertEqual('test' in cache, False)
+        testcache = db.DbCache('sqlite://')
+        testcache.set('test2', 'flasmburbert')
+        self.assertEqual('flasmburbert' in testcache, False)
 
     def test_db_timeout(self):
         '''Tests timeout in DbCache.'''
-        cache = db.DbCache('sqlite:///:memory:', timeout=1)
-        cache.set('test', 'test')
+        testcache = db.DbCache('sqlite://', timeout=1)
+        testcache.set('test', 'test')
         time.sleep(2)
-        self.assertEqual(cache.get('test'), None)         
+        self.assertEqual(testcache.get('test'), None)
 
     def test_mcd_set_getitem(self):
         '''Tests __setitem__ and __setitem__ on MemCache.'''
-        cache = memcached.MemCached('localhost')
-        cache['test'] = 'test'
-        self.assertEqual(cache['test'], 'test')
+        testcache = memcached.MemCached('localhost')
+        testcache['test'] = 'test'
+        self.assertEqual(testcache['test'], 'test')
 
     def test_mcd_set_get(self):
         '''Tests set and get on MemCache.'''
-        cache = memcached.MemCached('localhost')
-        cache.set('test', 'test')
-        self.assertEqual(cache.get('test'), 'test')
+        testcache = memcached.MemCached('localhost')
+        testcache.set('test', 'test')
+        self.assertEqual(testcache.get('test'), 'test')
 
     def test_mcd_delitem(self):
         '''Tests __delitem__ on MemCache.'''
-        cache = memcached.MemCached('localhost')
-        cache['test'] = 'test'
-        del cache['test']
-        self.assertEqual(cache.get('test'), None)
+        testcache = memcached.MemCached('localhost')
+        testcache['test'] = 'test'
+        del testcache['test']
+        self.assertEqual(testcache.get('test'), None)
 
     def test_mcd_set_delete(self):
         '''Tests delete on MemCache.'''
-        cache = memcached.MemCached('localhost')
-        cache.set('test', 'test')
-        cache.delete('test')
-        self.assertEqual(cache.get('test'), None)
+        testcache = memcached.MemCached('localhost')
+        testcache.set('test', 'test')
+        testcache.delete('test')
+        self.assertEqual(testcache.get('test'), None)
 
     def test_mcd_set_getmany(self):
         '''Tests delete on MemCache.'''
-        cache = memcached.MemCached('localhost')
-        cache.set('test', 'test')
-        cache.set('test2', 'test2')
-        self.assertEqual(sorted(cache.get_many(('test', 'test2')).values()), ['test', 'test2'])
+        testcache = memcached.MemCached('localhost')
+        testcache.set('test', 'test')
+        testcache.set('test2', 'test2')
+        self.assertEqual(sorted(testcache.get_many(('test', 'test2')).values()), ['test', 'test2'])
 
     def test_mcd_in_true(self):
         '''Tests in (true) on MemCache.'''
-        cache = memcached.MemCached('localhost')
-        cache.set('test', 'test')
-        self.assertEqual('test' in cache, True)
+        testcache = memcached.MemCached('localhost')
+        testcache.set('test', 'test')
+        self.assertEqual('test' in testcache, True)
 
     def test_mcd_in_false(self):
         '''Tests in (false) on MemCache.'''
-        cache = memcached.MemCached('localhost')
-        cache.set('test2', 'test')
-        self.assertEqual('test' in cache, False)
+        testcache = memcached.MemCached('localhost')
+        testcache.set('test2', 'test')
+        self.assertEqual('test' in testcache, False)
 
     def test_mcb_timeout(self):
         '''Tests timeout in DbCache.'''
-        cache = memcached.MemCached('localhost', timeout=1)
-        cache.set('test', 'test')
+        testcache = memcached.MemCached('localhost', timeout=1)
+        testcache.set('test', 'test')
         time.sleep(1)
-        self.assertEqual(cache.get('test'), None)          
+        self.assertEqual(testcache.get('test'), None)
 
     def test_cookiesession_sc(self):
         '''Tests session cookies with SimpleCache.'''
         testc = simple.SimpleCache()
-        cache = session.SessionCache(testc)
-        csession = session.CookieSession(self.my_app, cache)
+        testcache = session.SessionCache(testc)
+        csession = session.CookieSession(self.my_app, testcache)
         cookie = csession({}, self.dummy_sr)['cookie']
         csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
         csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
@@ -339,19 +343,19 @@ class TestWsgiState(unittest.TestCase):
     def test_cookiesession_mc(self):
         '''Tests session cookies with MemoryCache.'''
         testc = memory.MemoryCache()
-        cache = session.SessionCache(testc)
-        csession = session.CookieSession(self.my_app, cache)
+        testcache = session.SessionCache(testc)
+        csession = session.CookieSession(self.my_app, testcache)
         cookie = csession({}, self.dummy_sr)['cookie']
         csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
         csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
-        
+
     def test_cookiesession_fc(self):
         '''Tests session cookies with FileCache.'''
         testc = file.FileCache('test_wsgistate')
-        cache = session.SessionCache(testc)
-        csession = session.CookieSession(self.my_app, cache)
+        testcache = session.SessionCache(testc)
+        csession = session.CookieSession(self.my_app, testcache)
         cookie = csession({}, self.dummy_sr)['cookie']
         csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
         csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
@@ -360,9 +364,9 @@ class TestWsgiState(unittest.TestCase):
 
     def test_cookiesession_dc(self):
         '''Tests session cookies with DbCache.'''
-        testc = db.DbCache('sqlite:///:memory:')
-        cache = session.SessionCache(testc)
-        csession = session.CookieSession(self.my_app, cache)
+        testc = db.DbCache('sqlite://')
+        testcache = session.SessionCache(testc)
+        csession = session.CookieSession(self.my_app, testcache)
         cookie = csession({}, self.dummy_sr)['cookie']
         csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
         csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
@@ -372,8 +376,8 @@ class TestWsgiState(unittest.TestCase):
     def test_cookiesession_mdc(self):
         '''Tests session cookies with MemCached.'''
         testc = memcached.MemCached('localhost')
-        cache = session.SessionCache(testc)
-        csession = session.CookieSession(self.my_app, cache)
+        testcache = session.SessionCache(testc)
+        csession = session.CookieSession(self.my_app, testcache)
         cookie = csession({}, self.dummy_sr)['cookie']
         csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
         csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
@@ -397,7 +401,7 @@ class TestWsgiState(unittest.TestCase):
         result = tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
-    def test_dec_cookiesession_mc(self):
+    def test_dec_cookiesession_memc(self):
         '''Tests session cookies with MemoryCache decorator.'''
         @memory.session()
         def tapp(environ, start_response):
@@ -433,7 +437,7 @@ class TestWsgiState(unittest.TestCase):
 
     def test_dec_cookiesession_db(self):
         '''Tests session cookies with DbCache decorator.'''
-        @db.session('sqlite:///:memory:')
+        @db.session('sqlite://')
         def tapp(environ, start_response):
             session = environ['com.saddi.service.session'].session
             count = session.get('count', 0) + 1
@@ -463,13 +467,13 @@ class TestWsgiState(unittest.TestCase):
         tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
         tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
         result = tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        self.assertEqual(result['count'], 4)          
+        self.assertEqual(result['count'], 4)
 
     def test_random_cookiesession_sc(self):
         '''Tests random session cookies with SimpleCache.'''
         testc = simple.SimpleCache()
-        cache = session.SessionCache(testc, random=True)
-        csession = session.CookieSession(self.my_app, cache)
+        testcache = session.SessionCache(testc, random=True)
+        csession = session.CookieSession(self.my_app, testcache)
         result = csession({}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
@@ -479,19 +483,19 @@ class TestWsgiState(unittest.TestCase):
     def test_random_cookiesession_mc(self):
         '''Tests random session cookies with MemoryCache.'''
         testc = memory.MemoryCache()
-        cache = session.SessionCache(testc, random=True)
-        csession = session.CookieSession(self.my_app, cache)
+        testcache = session.SessionCache(testc, random=True)
+        csession = session.CookieSession(self.my_app, testcache)
         result = csession({}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
-        
+
     def test_random_cookiesession_fc(self):
         '''Tests random session cookies with FileCache.'''
         testc = file.FileCache('test_wsgistate')
-        cache = session.SessionCache(testc, random=True)
-        csession = session.CookieSession(self.my_app, cache)
+        testcache = session.SessionCache(testc, random=True)
+        csession = session.CookieSession(self.my_app, testcache)
         result = csession({}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
@@ -500,9 +504,9 @@ class TestWsgiState(unittest.TestCase):
 
     def test_random_cookiesession_dc(self):
         '''Tests random session cookies with DbCache.'''
-        testc = db.DbCache('sqlite:///:memory:')
-        cache = session.SessionCache(testc, random=True)
-        csession = session.CookieSession(self.my_app, cache)
+        testc = db.DbCache('sqlite://')
+        testcache = session.SessionCache(testc, random=True)
+        csession = session.CookieSession(self.my_app, testcache)
         result = csession({}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
@@ -512,8 +516,8 @@ class TestWsgiState(unittest.TestCase):
     def test_random_cookiesession_mdc(self):
         '''Tests random session cookies with MemCached.'''
         testc = memcached.MemCached('localhost')
-        cache = session.SessionCache(testc, random=True)
-        csession = session.CookieSession(self.my_app, cache)
+        testcache = session.SessionCache(testc, random=True)
+        csession = session.CookieSession(self.my_app, testcache)
         result = csession({}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
@@ -573,7 +577,7 @@ class TestWsgiState(unittest.TestCase):
 
     def test_dec_random_cookiesession_db(self):
         '''Tests random session cookies with DbCache decorator.'''
-        @db.session('sqlite:///:memory:', random=True)
+        @db.session('sqlite://', random=True)
         def tapp(environ, start_response):
             session = environ['com.saddi.service.session'].session
             count = session.get('count', 0) + 1
@@ -603,13 +607,13 @@ class TestWsgiState(unittest.TestCase):
         result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
         result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
-        self.assertEqual(result['count'], 4)                
+        self.assertEqual(result['count'], 4)
 
     def test_urlsession_sc(self):
         '''Tests URL encoded sessions with SimpleCache.'''
         testc = simple.SimpleCache()
-        cache = session.SessionCache(testc)
-        csession = session.URLSession(self.my_app2, cache)
+        testcache = session.SessionCache(testc)
+        csession = session.URLSession(self.my_app2, testcache)
         url = csession({}, self.dummy_sr)[0].split()[-1]
         query = urlparse.urlsplit(url)[3]
         csession({'QUERY_STRING':query}, self.dummy_sr)
@@ -621,8 +625,8 @@ class TestWsgiState(unittest.TestCase):
     def test_urlsession_mc(self):
         '''Tests URL encoded sessions with MemoryCache.'''
         testc = memory.MemoryCache()
-        cache = session.SessionCache(testc)
-        csession = session.URLSession(self.my_app2, cache)
+        testcache = session.SessionCache(testc)
+        csession = session.URLSession(self.my_app2, testcache)
         url = csession({}, self.dummy_sr)[0].split()[-1]
         query = urlparse.urlsplit(url)[3]
         csession({'QUERY_STRING':query}, self.dummy_sr)
@@ -630,12 +634,12 @@ class TestWsgiState(unittest.TestCase):
         csession({'QUERY_STRING':query}, self.dummy_sr)
         result = csession({'QUERY_STRING':query}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
-        
+
     def test_urlsession_fc(self):
         '''Tests URL encoded sessions with FileCache.'''
         testc = file.FileCache('test_wsgistate')
-        cache = session.SessionCache(testc)
-        csession = session.URLSession(self.my_app2, cache)
+        testcache = session.SessionCache(testc)
+        csession = session.URLSession(self.my_app2, testcache)
         url = csession({}, self.dummy_sr)[0].split()[-1]
         query = urlparse.urlsplit(url)[3]
         csession({'QUERY_STRING':query}, self.dummy_sr)
@@ -646,9 +650,9 @@ class TestWsgiState(unittest.TestCase):
 
     def test_urlsession_dc(self):
         '''Tests URL encoded sessions with DbCache.'''
-        testc = db.DbCache('sqlite:///:memory:')
-        cache = session.SessionCache(testc)
-        csession = session.URLSession(self.my_app2, cache)
+        testc = db.DbCache('sqlite://')
+        testcache = session.SessionCache(testc)
+        csession = session.URLSession(self.my_app2, testcache)
         url = csession({}, self.dummy_sr)[0].split()[-1]
         query = urlparse.urlsplit(url)[3]
         csession({'QUERY_STRING':query}, self.dummy_sr)
@@ -660,8 +664,8 @@ class TestWsgiState(unittest.TestCase):
     def test_urlsession_mdc(self):
         '''Tests URL encoded sessions with MemCached.'''
         testc = memcached.MemCached('localhost')
-        cache = session.SessionCache(testc)
-        csession = session.URLSession(self.my_app2, cache)
+        testcache = session.SessionCache(testc)
+        csession = session.URLSession(self.my_app2, testcache)
         url = csession({}, self.dummy_sr)[0].split()[-1]
         query = urlparse.urlsplit(url)[3]
         csession({'QUERY_STRING':query}, self.dummy_sr)
@@ -707,7 +711,7 @@ class TestWsgiState(unittest.TestCase):
         csession({'QUERY_STRING':query}, self.dummy_sr)
         result = csession({'QUERY_STRING':query}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
-        
+
     def test_dec_urlsession_fc(self):
         '''Tests URL encoded sessions with FileCache decorator.'''
         @file.urlsession('test_wsgistate')
@@ -729,7 +733,7 @@ class TestWsgiState(unittest.TestCase):
 
     def test_dec_urlsession_dc(self):
         '''Tests URL encoded sessions with DbCache decorator.'''
-        @db.urlsession('sqlite:///:memory:')
+        @db.urlsession('sqlite://')
         def csession(environ, start_response):
             session = environ['com.saddi.service.session'].session
             count = session.get('count', 0) + 1
@@ -763,7 +767,7 @@ class TestWsgiState(unittest.TestCase):
         csession({'QUERY_STRING':query}, self.dummy_sr)
         csession({'QUERY_STRING':query}, self.dummy_sr)
         result = csession({'QUERY_STRING':query}, self.dummy_sr)
-        self.assertEqual(result['count'], 4)        
+        self.assertEqual(result['count'], 4)
 
     def test_wsgimemoize_default_sc(self):
         '''Tests default memoizing with SimpleCache decorator.'''
@@ -794,7 +798,7 @@ class TestWsgiState(unittest.TestCase):
 
     def test_wsgimemoize_default_db(self):
         '''Tests default memoizing with DbCache.'''
-        testc = db.DbCache('sqlite:///:memory:')
+        testc = db.DbCache('sqlite://')
         env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
         cacheapp = cache.WsgiMemoize(self.my_app3, testc)
         result1 = cacheapp(env, self.dummy_sr)
@@ -845,7 +849,7 @@ class TestWsgiState(unittest.TestCase):
 
     def test_dec_wsgimemoize_default_db(self):
         '''Tests default memoizing with DbCache.'''
-        @db.memoize('sqlite:///:memory:')
+        @db.memoize('sqlite://')
         def cacheapp(environ, start_response):
             start_response('200 OK', [])
             return ['passed']
@@ -863,7 +867,7 @@ class TestWsgiState(unittest.TestCase):
         env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
-        self.assertEqual(result1 == result2, True)        
+        self.assertEqual(result1 == result2, True)
 
     def test_wsgimemoize_method_sc(self):
         '''Tests memoizing with HTTP method as part of the key with SimpleCache.'''
@@ -894,7 +898,7 @@ class TestWsgiState(unittest.TestCase):
 
     def test_wsgimemoize_method_db(self):
         '''Tests memoizing with HTTP method as part of the key with DbCache.'''
-        testc = db.DbCache('sqlite:///:memory:')
+        testc = db.DbCache('sqlite://')
         env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
         cacheapp = cache.WsgiMemoize(self.my_app3, testc, key_methods=True)
         result1 = cacheapp(env, self.dummy_sr)
@@ -942,7 +946,7 @@ class TestWsgiState(unittest.TestCase):
 
     def test_wsgimemoize_user_info_db(self):
         '''Tests memoizing with user info as part of the key with DbCache.'''
-        testc = db.DbCache('sqlite:///:memory:')
+        testc = db.DbCache('sqlite://')
         env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET',
         'wsgi.input':StringIO.StringIO('num=12121&str1=test&state=NV&Submit=Submit')}
         cacheapp = cache.WsgiMemoize(self.my_app3, testc, key_user_info=True)
@@ -981,32 +985,32 @@ class TestWsgiState(unittest.TestCase):
         self.assertEqual(result1 == result2, True)
 
     def test_public(self):
-        '''Tests correct setting of Cache-Control header "public".'''        
+        '''Tests correct setting of Cache-Control header "public".'''
         @cache.public
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers 
-            return environ    
+            if headers: environ['headers'] = headers
+            return environ
         result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
         self.assertEqual(result['Cache-Control'], 'public')
-                                
+
     def test_private(self):
         '''Tests correct setting of Cache-Control header "private".'''
         @cache.private
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers 
-            return environ    
+            if headers: environ['headers'] = headers
+            return environ
         result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
         self.assertEqual(result['Cache-Control'], 'private')
-    
+
     def test_nocache(self):
         '''Tests correct setting of Cache-Control header "no-cache".'''
         @cache.nocache
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers 
-            return environ    
+            if headers: environ['headers'] = headers
+            return environ
         result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
         self.assertEqual(result['Cache-Control'], 'no-cache')
 
@@ -1015,8 +1019,8 @@ class TestWsgiState(unittest.TestCase):
         @cache.nostore
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers 
-            return environ    
+            if headers: environ['headers'] = headers
+            return environ
         result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
         self.assertEqual(result['Cache-Control'], 'no-store')
 
@@ -1025,8 +1029,8 @@ class TestWsgiState(unittest.TestCase):
         @cache.notransform
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers 
-            return environ    
+            if headers: environ['headers'] = headers
+            return environ
         result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
         self.assertEqual(result['Cache-Control'], 'no-transform')
 
@@ -1035,18 +1039,18 @@ class TestWsgiState(unittest.TestCase):
         @cache.revalidate
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers 
-            return environ    
+            if headers: environ['headers'] = headers
+            return environ
         result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
-        self.assertEqual(result['Cache-Control'], 'must-revalidate')              
+        self.assertEqual(result['Cache-Control'], 'must-revalidate')
 
     def test_proxyrevalidate(self):
         '''Tests correct setting of Cache-Control header "proxy-revalidate".'''
         @cache.proxyrevalidate
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers 
-            return environ    
+            if headers: environ['headers'] = headers
+            return environ
         result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
         self.assertEqual(result['Cache-Control'], 'proxy-revalidate')
 
@@ -1055,8 +1059,8 @@ class TestWsgiState(unittest.TestCase):
         @cache.maxage(30)
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers 
-            return environ    
+            if headers: environ['headers'] = headers
+            return environ
         result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
         self.assertEqual(result['Cache-Control'], 'max-age=30')
 
@@ -1065,8 +1069,8 @@ class TestWsgiState(unittest.TestCase):
         @cache.smaxage(30)
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers 
-            return environ    
+            if headers: environ['headers'] = headers
+            return environ
         result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
         self.assertEqual(result['Cache-Control'], 's-maxage=30')
 
@@ -1075,8 +1079,8 @@ class TestWsgiState(unittest.TestCase):
         @cache.vary(['Content-type'])
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers 
-            return environ    
+            if headers: environ['headers'] = headers
+            return environ
         result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
         self.assertEqual(result['Vary'], 'Content-type')
 
@@ -1085,10 +1089,10 @@ class TestWsgiState(unittest.TestCase):
         @cache.modified(30)
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers 
-            return environ    
+            if headers: environ['headers'] = headers
+            return environ
         result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
-        self.assertEqual('Modified' in result, True)        
+        self.assertEqual('Modified' in result, True)
 
     def test_cachecontrol_combo(self):
         '''Tests correct setting of two Cache Control header settings.'''
@@ -1096,12 +1100,12 @@ class TestWsgiState(unittest.TestCase):
         @cache.private
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers 
-            return environ    
+            if headers: environ['headers'] = headers
+            return environ
         result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
-        self.assertEqual(result['Cache-Control'], 's-maxage=30, private')         
+        self.assertEqual(result['Cache-Control'], 's-maxage=30, private')
 
-    'modified'        
+    'modified'
 
 if __name__ == '__main__':
     unittest.main()

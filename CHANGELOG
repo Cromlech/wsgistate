@@ -2,3 +2,8 @@ Changes between 0.4 and 0.4.1
 
 - only caches explicitly declared HTTP methods (Roberto De Alemeida)
 - non-destructively consumes 'wsgi.input' (Roberto De Alemeida)
+
+Changes between 0.4.1 and 0.4.2
+
+- update to work with SQLAlchemy 0.4.x
+- support for Paste Deploy

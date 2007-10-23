@@ -5,10 +5,10 @@
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
 #
-#    1. Redistributions of source code must retain the above copyright notice, 
+#    1. Redistributions of source code must retain the above copyright notice,
 #       this list of conditions and the following disclaimer.
-#    
-#    2. Redistributions in binary form must reproduce the above copyright 
+#
+#    2. Redistributions in binary form must reproduce the above copyright
 #       notice, this list of conditions and the following disclaimer in the
 #       documentation and/or other materials provided with the distribution.
 #
@@ -37,6 +37,32 @@ from wsgistate.session import CookieSession, URLSession, SessionCache
 
 __all__ = ['SimpleCache', 'memoize', 'session', 'urlsession']
 
+def simplememo_deploy(global_conf, **kw):
+    '''Paste Deploy loader for caching.'''
+    def decorator(application):
+        _simple_memo_cache = SimpleCache(kw.get('cache'), **kw)
+        return WsgiMemoize(application, _simple_memo_cache, **kw)
+    return decorator
+
+def simplesess_deploy(global_conf, **kw):
+    '''Paste Deploy loader for sessions.'''
+    def decorator(application):
+        _simple_base_cache = SimpleCache(kw.get('cache'), **kw)
+        _simple_session_cache = SessionCache(_simple_base_cache, **kw)
+        return CookieSession(application, _simple_session_cache, **kw)
+    return decorator
+
+def simpleurlsess_deploy(global_conf, **kw):
+    '''Paste Deploy loader for URL encoded sessions.
+
+    @param initstr Database initialization string
+    '''
+    def decorator(application):
+        _simple_ubase_cache = SimpleCache(kw.get('cache'), **kw)
+        _simple_url_cache = SessionCache(_simple_ubase_cache, **kw)
+        return URLSession(application, _simple_url_cache, **kw)
+    return decorator
+
 def memoize(**kw):
     '''Decorator for caching.'''
     def decorator(application):
@@ -63,12 +89,12 @@ def urlsession(**kw):
 
 class SimpleCache(BaseCache):
 
-    '''Single-process in-memory cache backend.'''    
-    
+    '''Single-process in-memory cache backend.'''
+
     def __init__(self, *a, **kw):
         super(SimpleCache, self).__init__(*a, **kw)
         # Get random seed
-        random.seed()        
+        random.seed()
         self._cache = dict()
         # Set max entries
         max_entries = kw.get('max_entries', 300)
@@ -92,13 +118,13 @@ class SimpleCache(BaseCache):
         if values[0] < time.time():
             self.delete(key)
             return default
-        return values[1] 
+        return values[1]
 
     def set(self, key, value):
         '''Set a value in the cache.
 
         @param key Keyword of item in cache.
-        @param value Value to be inserted in cache.        
+        @param value Value to be inserted in cache.
         '''
         # Cull timed out values if over max # of entries
         if len(self._cache) >= self._max_entries: self._cull()
@@ -119,7 +145,7 @@ class SimpleCache(BaseCache):
         return self._cache.keys()
 
     def _cull(self):
-        '''Remove items in cache to make room.'''        
+        '''Remove items in cache to make room.'''
         num, maxcull = 0, self._maxcull
         # Cull number of items allowed (set by self._maxcull)
         for key in self.keys():
