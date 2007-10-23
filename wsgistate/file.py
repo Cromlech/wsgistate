@@ -5,10 +5,10 @@
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
 #
-#    1. Redistributions of source code must retain the above copyright notice, 
+#    1. Redistributions of source code must retain the above copyright notice,
 #       this list of conditions and the following disclaimer.
-#    
-#    2. Redistributions in binary form must reproduce the above copyright 
+#
+#    2. Redistributions in binary form must reproduce the above copyright
 #       notice, this list of conditions and the following disclaimer in the
 #       documentation and/or other materials provided with the distribution.
 #
@@ -34,12 +34,38 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+
 from wsgistate.simple import SimpleCache
 from wsgistate.cache import WsgiMemoize
 from wsgistate.session import CookieSession, URLSession, SessionCache
 
 __all__ = ['FileCache', 'memoize', 'session', 'urlsession']
 
+def filememo_deploy(global_conf, **kw):
+    '''Paste Deploy loader for caching.'''
+    def decorator(application):
+        _file_memo_cache = FileCache(kw.get('cache'), **kw)
+        return WsgiMemoize(application, _file_memo_cache, **kw)
+    return decorator
+
+def filesess_deploy(global_conf, **kw):
+    '''Paste Deploy loader for sessions.'''
+    def decorator(application):
+        _file_base_cache = FileCache(kw.get('cache'), **kw)
+        _file_session_cache = SessionCache(_file_base_cache, **kw)
+        return CookieSession(application, _file_session_cache, **kw)
+    return decorator
+
+def fileurlsess_deploy(global_conf, **kw):
+    '''Paste Deploy loader for URL encoded sessions.
+
+    @param initstr Database initialization string
+    '''
+    def decorator(application):
+        _file_ubase_cache = FileCache(kw.get('cache'), **kw)
+        _file_url_cache = SessionCache(_file_ubase_cache, **kw)
+        return URLSession(application, _file_url_cache, **kw)
+    return decorator
 
 def memoize(path, **kw):
     '''Decorator for caching.
@@ -76,8 +102,8 @@ def urlsession(path, **kw):
 
 class FileCache(SimpleCache):
 
-    '''File-based cache backend'''    
-    
+    '''File-based cache backend'''
+
     def __init__(self, *a, **kw):
         super(FileCache, self).__init__(*a, **kw)
         # Create directory
@@ -101,7 +127,7 @@ class FileCache(SimpleCache):
         @param default Default value (default: None)
         '''
         try:
-            exp, value = pickle.load(open(self._key_to_file(key), 'rb')) 
+            exp, value = pickle.load(open(self._key_to_file(key), 'rb'))
             # Remove item if time has expired.
             if exp < time.time():
                 self.delete(key)
@@ -114,8 +140,8 @@ class FileCache(SimpleCache):
         '''Set a value in the cache.
 
         @param key Keyword of item in cache.
-        @param value Value to be inserted in cache.        
-        '''        
+        @param value Value to be inserted in cache.
+        '''
         if len(self.keys()) > self._max_entries: self._cull()
         try:
             fname = self._key_to_file(key)
@@ -134,7 +160,7 @@ class FileCache(SimpleCache):
     def keys(self):
         '''Returns a list of keys in the cache.'''
         return os.listdir(self._dir)
-    
+
     def _createdir(self):
         '''Creates the cache directory.'''
         try:

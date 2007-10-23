@@ -36,6 +36,12 @@ __all__ = ['WsgiMemoize', 'CacheHeader', 'memoize', 'public', 'private',
     'nocache', 'nostore', 'notransform', 'revalidate', 'proxyrevalidate',
     'maxage', 'smaxage', 'vary', 'modified']
 
+def memoize(cache, **kw):
+    '''Decorator for caching.'''
+    def decorator(application):
+        return WsgiMemoize(application, cache, **kw)
+    return decorator
+
 def getinput(environ):
     '''Non-destructively retrieves wsgi.input value.'''
     wsginput = environ['wsgi.input']
@@ -59,12 +65,6 @@ def expiredate(seconds, value):
     now = time.time()
     return {'Cache-Control':value % seconds, 'Date':rfc822.formatdate(now),
         'Expires':rfc822.formatdate(now + seconds)}
-
-def memoize(cache, **kw):
-    '''Decorator for caching.'''
-    def decorator(application):
-        return WsgiMemoize(application, cache, **kw)
-    return decorator
 
 def control(application, value):
     '''Generic setter for 'Cache-Control' headers.

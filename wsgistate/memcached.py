@@ -5,10 +5,10 @@
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
 #
-#    1. Redistributions of source code must retain the above copyright notice, 
+#    1. Redistributions of source code must retain the above copyright notice,
 #       this list of conditions and the following disclaimer.
-#    
-#    2. Redistributions in binary form must reproduce the above copyright 
+#
+#    2. Redistributions in binary form must reproduce the above copyright
 #       notice, this list of conditions and the following disclaimer in the
 #       documentation and/or other materials provided with the distribution.
 #
@@ -29,16 +29,39 @@
 
 '''Memcached cache backend'''
 
-try:
-    import memcache
-except ImportError:
-    raise ImportError("Memcached cache backend requires the 'memcache' library")
+import memcache
+
 from wsgistate import BaseCache
 from wsgistate.cache import WsgiMemoize
 from wsgistate.session import CookieSession, URLSession, SessionCache
 
 __all__ = ['MemCached', 'memoize', 'session', 'urlsession']
 
+def mcmemo_deploy(global_conf, **kw):
+    '''Paste Deploy loader for caching.'''
+    def decorator(application):
+        _mc_memo_cache = MemCached(kw.get('cache'), **kw)
+        return WsgiMemoize(application, _mc_memo_cache, **kw)
+    return decorator
+
+def mcsess_deploy(global_conf, **kw):
+    '''Paste Deploy loader for sessions.'''
+    def decorator(application):
+        _mc_base_cache = MemCached(kw.get('cache'), **kw)
+        _mc_session_cache = SessionCache(_mc_base_cache, **kw)
+        return CookieSession(application, _mc_session_cache, **kw)
+    return decorator
+
+def mcurlsess_deploy(global_conf, **kw):
+    '''Paste Deploy loader for URL encoded sessions.
+
+    @param initstr Database initialization string
+    '''
+    def decorator(application):
+        _mc_ubase_cache = MemCached(kw.get('cache'), **kw)
+        _mc_url_cache = SessionCache(_mc_ubase_cache, **kw)
+        return URLSession(application, _mc_url_cache, **kw)
+    return decorator
 
 def memoize(path, **kw):
     '''Decorator for caching.
@@ -75,8 +98,8 @@ def urlsession(path, **kw):
 
 class MemCached(BaseCache):
 
-    '''Memcached cache backend'''    
-    
+    '''Memcached cache backend'''
+
     def __init__(self, *a, **kw):
         super(MemCached, self).__init__(*a, **kw)
         self._cache = memcache.Client(a[0].split(';'))
@@ -96,7 +119,7 @@ class MemCached(BaseCache):
         '''Set a value in the cache.
 
         @param key Keyword of item in cache.
-        @param value Value to be inserted in cache.        
+        @param value Value to be inserted in cache.
         '''
         self._cache.set(key, value, self.timeout)
 
@@ -113,7 +136,7 @@ class MemCached(BaseCache):
         Returns a dict mapping each key in keys to its value.  If the given
         key is missing, it will be missing from the response dict.
 
-        @param keys Keywords of items in cache.        
+        @param keys Keywords of items in cache.
         '''
         return self._cache.get_multi(keys)
 

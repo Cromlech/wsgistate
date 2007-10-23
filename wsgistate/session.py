@@ -40,6 +40,7 @@ try:
     import threading
 except ImportError:
     import dummy_threading as threading
+
 from wsgistate import synchronized
 
 __all__ = ['SessionCache', 'SessionManager', 'CookieSession', 'URLSession',
@@ -48,7 +49,7 @@ __all__ = ['SessionCache', 'SessionManager', 'CookieSession', 'URLSession',
 def _shutdown(ref):
     cache = ref()
     if cache is not None: cache.shutdown()
-    
+
 def session(cache, **kw):
     '''Decorator for sessions.'''
     def decorator(application):
@@ -63,7 +64,7 @@ def urlsession(cache, **kw):
 
 
 class SessionCache(object):
-    
+
     '''Base class for session cache. You first acquire a session by
     calling create() or checkout(). After using the session, you must call
     checkin(). You must not keep references to sessions outside of a check
@@ -91,12 +92,12 @@ class SessionCache(object):
     @synchronized
     def create(self):
         '''Create a new session with a unique identifier.
-        
+
         The newly-created session should eventually be released by
-        a call to checkin().            
+        a call to checkin().
         '''
         sid, sess = self.newid(), dict()
-        self.cache.set(sid, sess)            
+        self.cache.set(sid, sess)
         self.checkedout[sid] = sess
         return sid, sess
 
@@ -108,7 +109,7 @@ class SessionCache(object):
         Therefore, it should eventually be released by a call to
         checkin().
 
-        @param sid Session id        
+        @param sid Session id
         '''
         # If we know it's already checked out, block.
         while sid in self.checkedout: self._lock.wait()
@@ -136,13 +137,13 @@ class SessionCache(object):
 
     @synchronized
     def shutdown(self):
-        '''Clean up outstanding sessions.'''        
+        '''Clean up outstanding sessions.'''
         if not self._closed:
             # Save or delete any sessions that are still out there.
             for sid, sess in self.checkedout.iteritems():
                 self.cache.set(sid, sess)
             self.checkedout.clear()
-            self.cache._cull()                
+            self.cache._cull()
             self._closed = True
 
     # Utilities
@@ -155,11 +156,11 @@ class SessionCache(object):
               str(random.randint(0, sys.maxint - 1)) + self._secret).hexdigest()
             if sid not in self.cache: break
         return sid
-            
+
 
 class SessionManager(object):
 
-    '''Session Manager.'''  
+    '''Session Manager.'''
 
     def __init__(self, cache, environ, **kw):
         self._cache = cache
@@ -191,7 +192,7 @@ class SessionManager(object):
             if self._sid is not None:
                 self._csid, self.inurl = value, True
                 if self._csid != self._sid: self.current = self.new = True
-        
+
     def _get(self, environ):
         '''Attempt to associate with an existing Session.'''
         # Try cookie first.
@@ -201,15 +202,15 @@ class SessionManager(object):
         if self.session is None:
             self._sid, self.session = self._cache.create()
             self.new = True
-    
+
     def close(self):
         '''Checks session back into session cache.'''
         # Check the session back in and get rid of our reference.
         self._cache.checkin(self._sid, self.session)
         self.session = None
-   
+
     def setcookie(self, headers):
-        '''Sets a cookie header if needed.''' 
+        '''Sets a cookie header if needed.'''
         cookie, name = SimpleCookie(), self._fieldname
         cookie[name], cookie[name]['path'] = self._sid, self._path
         headers.append(('Set-Cookie', cookie[name].OutputString()))
@@ -224,7 +225,7 @@ class SessionManager(object):
         else:
             self._qdict = {self._fieldname:self._sid}
         return '?'.join([path, urllib.urlencode(self._qdict)])
-        
+
 class _Session(object):
 
     '''WSGI middleware that adds a session service.'''
@@ -240,14 +241,14 @@ class _Session(object):
         environ[self.key] = sess
         try:
             # Return intial response if new or session id is random
-            if sess.new: return self._initial(environ, start_response)                
+            if sess.new: return self._initial(environ, start_response)
             return self.application(environ, start_response)
         # Always close session
-        finally:            
+        finally:
             sess.close()
-            
 
-class CookieSession(_Session):            
+
+class CookieSession(_Session):
 
     '''WSGI middleware that adds a session service in a cookie.'''
 
@@ -260,7 +261,7 @@ class CookieSession(_Session):
 
 
 class URLSession(_Session):
-    
+
     '''WSGI middleware that adds a session service in a URL query string.'''
 
     def _initial(self, environ, start_response):
@@ -268,4 +269,4 @@ class URLSession(_Session):
         url = environ[self.key].seturl(environ)
         # Redirect to URL with session in query component
         start_response('302 Found', [('location', url)])
-        return ['The browser is being redirected to %s' % url]   
+        return ['The browser is being redirected to %s' % url]
