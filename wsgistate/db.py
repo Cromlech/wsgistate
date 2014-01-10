@@ -1,31 +1,32 @@
+# Copyright (c) 2005 Allan Saddi <allan@saddi.com>
 # Copyright (c) 2005, the Lawrence Journal-World
 # Copyright (c) 2006 L. C. Rees
+#
 # All rights reserved.
 #
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of Django nor the names of its contributors may
+#    be used to endorse or promote products derived from this software
+#    without specific prior written permission.
 #
-#    1. Redistributions of source code must retain the above copyright notice,
-#       this list of conditions and the following disclaimer.
-#
-#    2. Redistributions in binary form must reproduce the above copyright
-#       notice, this list of conditions and the following disclaimer in the
-#       documentation and/or other materials provided with the distribution.
-#
-#    3. Neither the name of Django nor the names of its contributors may be used
-#       to endorse or promote products derived from this software without
-#       specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-# ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
 
 '''Database cache backend.'''
 
@@ -34,9 +35,8 @@ from random import choice
 from datetime import datetime
 
 from sqlalchemy import (
-        Table, Column, String, Binary, DateTime,
-        Integer, PickleType, bindparam, select, update,
-        delete, insert,
+    Table, Column, String, DateTime, Integer, PickleType,
+    bindparam, select, update, delete, insert,
     )
 try:
     from sqlalchemy import BoundMetaData
@@ -49,12 +49,14 @@ from wsgistate.session import CookieSession, URLSession, SessionCache
 
 __all__ = ['DbCache', 'memoize', 'session', 'urlsession']
 
+
 def dbmemo_deploy(global_conf, **kw):
     '''Paste Deploy loader for caching.'''
     def decorator(application):
         _db_memo_cache = DbCache(kw.get('cache'), **kw)
         return WsgiMemoize(application, _db_memo_cache, **kw)
     return decorator
+
 
 def dbsession_deploy(global_conf, **kw):
     '''Paste Deploy loader for sessions.'''
@@ -63,6 +65,7 @@ def dbsession_deploy(global_conf, **kw):
         _db_session_cache = SessionCache(_db_base_cache, **kw)
         return CookieSession(application, _db_session_cache, **kw)
     return decorator
+
 
 def dburlsess_deploy(global_conf, **kw):
     '''Paste Deploy loader for URL encoded sessions.
@@ -75,6 +78,7 @@ def dburlsess_deploy(global_conf, **kw):
         return URLSession(application, _db_url_cache, **kw)
     return decorator
 
+
 def memoize(initstr, **kw):
     '''Decorator for caching.
 
@@ -84,6 +88,7 @@ def memoize(initstr, **kw):
         _db_memo_cache = DbCache(initstr, **kw)
         return WsgiMemoize(application, _db_memo_cache, **kw)
     return decorator
+
 
 def session(initstr, **kw):
     '''Decorator for sessions.
@@ -95,6 +100,7 @@ def session(initstr, **kw):
         _db_session_cache = SessionCache(_db_base_cache, **kw)
         return CookieSession(application, _db_session_cache, **kw)
     return decorator
+
 
 def urlsession(initstr, **kw):
     '''Decorator for URL encoded sessions.
@@ -129,7 +135,8 @@ class DbCache(BaseCache):
             Column('expires', DateTime, nullable=False)
         )
         # Create cache if it does not exist
-        if not self._cache.exists(): self._cache.create()
+        if not self._cache.exists():
+            self._cache.create()
         # Maximum number of entries to cull per call if cache is full
         self._maxcull = kw.get('maxcull', 10)
         max_entries = kw.get('max_entries', 300)
@@ -150,8 +157,7 @@ class DbCache(BaseCache):
         '''
         row = select(
             [self._cache.c.value, self._cache.c.expires],
-            self._cache.c.key==key
-        ).execute().fetchone()
+            self._cache.c.key == key).execute().fetchone()
         if row is None:
             return default
         if row.expires < datetime.now().replace(microsecond=0):
@@ -165,7 +171,8 @@ class DbCache(BaseCache):
         @param key Keyword of item in cache.
         @param value Value to be inserted in cache.
         '''
-        if len(self) > self._max_entries: self._cull()
+        if len(self) > self._max_entries:
+            self._cull()
         timeout, cache = self.timeout, self._cache
         # Get expiration time
         expires = datetime.fromtimestamp(
@@ -176,12 +183,13 @@ class DbCache(BaseCache):
         if key in self:
             update(
                 cache,
-                cache.c.key==key,
+                cache.c.key == key,
                 dict(value=value, expires=expires),
             ).execute()
         # Insert new key if key not present
         else:
-            insert(cache, dict(key=key, value=value, expires=expires)).execute()
+            insert(
+                cache, dict(key=key, value=value, expires=expires)).execute()
         # To be threadsafe, updates/inserts are allowed to fail silently
         #except: pass
 
@@ -190,7 +198,7 @@ class DbCache(BaseCache):
 
         @param key Keyword of item in cache.
         '''
-        delete(self._cache, self._cache.c.key==k).execute()
+        delete(self._cache, self._cache.c.key == k).execute()
 
     def _cull(self):
         '''Remove items in cache to make more room.'''
@@ -211,5 +219,5 @@ class DbCache(BaseCache):
             # Get some keys at random
             delkeys = list(choice(keys) for i in xrange(maxcull))
             # Delete keys
-            fkeys = tuple({'key':k} for k in delkeys)
+            fkeys = tuple({'key': k} for k in delkeys)
             delete(cache, cache.c.key.in_(bindparam('key'))).execute(*fkeys)

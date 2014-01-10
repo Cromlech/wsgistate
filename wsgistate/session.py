@@ -44,17 +44,21 @@ except ImportError:
 from wsgistate import synchronized
 
 __all__ = ['SessionCache', 'SessionManager', 'CookieSession', 'URLSession',
-     'session', 'urlsession']
+           'session', 'urlsession']
+
 
 def _shutdown(ref):
     cache = ref()
-    if cache is not None: cache.shutdown()
+    if cache is not None:
+        cache.shutdown()
+
 
 def session(cache, **kw):
     '''Decorator for sessions.'''
     def decorator(application):
         return CookieSession(application, cache, **kw)
     return decorator
+
 
 def urlsession(cache, **kw):
     '''Decorator for URL encoded sessions.'''
@@ -80,7 +84,7 @@ class SessionCache(object):
         # Sets if session id is random on every access or not
         self._random = kw.get('random', False)
         self._secret = ''.join(self.idchars[ord(c) % len(self.idchars)]
-            for c in os.urandom(self.length))
+                               for c in os.urandom(self.length))
         # Ensure shutdown is called.
         atexit.register(_shutdown, weakref.ref(self))
 
@@ -112,7 +116,9 @@ class SessionCache(object):
         @param sid Session id
         '''
         # If we know it's already checked out, block.
-        while sid in self.checkedout: self._lock.wait()
+        while sid in self.checkedout:
+            self._lock.wait()
+
         sess = self.cache.get(sid)
         if sess is not None:
             # Randomize session id if set and remove old session id
@@ -152,9 +158,12 @@ class SessionCache(object):
         'Returns session key that is not being used.'
         sid = None
         for num in xrange(10000):
-            sid = sha.new(str(random.randint(0, sys.maxint - 1)) +
-              str(random.randint(0, sys.maxint - 1)) + self._secret).hexdigest()
-            if sid not in self.cache: break
+            sid = sha.new(
+                str(random.randint(0, sys.maxint - 1)) +
+                str(random.randint(0, sys.maxint - 1)) + self._secret
+                ).hexdigest()
+            if sid not in self.cache:
+                break
         return sid
 
 
@@ -179,7 +188,8 @@ class SessionManager(object):
         if morsel is not None:
             self._sid, self.session = self._cache.checkout(morsel.value)
             self._csid = morsel.value
-            if self._csid != self._sid: self.new = True
+            if self._csid != self._sid:
+                self.new = True
 
     def _fromquery(self, environ):
         '''Attempt to load the associated session using the identifier from
@@ -191,14 +201,16 @@ class SessionManager(object):
             self._sid, self.session = self._cache.checkout(value)
             if self._sid is not None:
                 self._csid, self.inurl = value, True
-                if self._csid != self._sid: self.current = self.new = True
+                if self._csid != self._sid:
+                    self.current = self.new = True
 
     def _get(self, environ):
         '''Attempt to associate with an existing Session.'''
         # Try cookie first.
         self._fromcookie(environ)
         # Next, try query string.
-        if self.session is None: self._fromquery(environ)
+        if self.session is None:
+                self._fromquery(environ)
         if self.session is None:
             self._sid, self.session = self._cache.create()
             self.new = True
@@ -218,13 +230,15 @@ class SessionManager(object):
     def seturl(self, environ):
         '''Encodes session ID in URL, if necessary.'''
         path = ''.join([quote(environ.get('SCRIPT_NAME', '')),
-            quote(environ.get('PATH_INFO', ''))])
+                        quote(environ.get('PATH_INFO', ''))])
+
         # Get query
         if self._qdict:
             self._qdict[self._fieldname] = self._sid
         else:
-            self._qdict = {self._fieldname:self._sid}
+            self._qdict = {self._fieldname: self._sid}
         return '?'.join([path, urllib.urlencode(self._qdict)])
+
 
 class _Session(object):
 
@@ -240,8 +254,9 @@ class _Session(object):
         sess = SessionManager(self.cache, environ, **self.kw)
         environ[self.key] = sess
         try:
-            # Return intial response if new or session id is random
-            if sess.new: return self._initial(environ, start_response)
+            # Return initial response if new or session id is random
+            if sess.new:
+                return self._initial(environ, start_response)
             return self.application(environ, start_response)
         # Always close session
         finally:

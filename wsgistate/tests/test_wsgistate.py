@@ -1,41 +1,36 @@
 # Copyright (c) 2006 L. C. Rees
+#
 # All rights reserved.
 #
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
 #
-#    1. Redistributions of source code must retain the above copyright notice,
-#       this list of conditions and the following disclaimer.
-#
-#    2. Redistributions in binary form must reproduce the above copyright
-#       notice, this list of conditions and the following disclaimer in the
-#       documentation and/or other materials provided with the distribution.
-#
-#    3. Neither the name of psilib nor the names of its contributors may be used
-#       to endorse or promote products derived from this software without
-#       specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-# ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
 
 '''Unit tests for wsgistate.'''
 
 import unittest
 import StringIO
-import copy
 import os
 import time
 import urlparse
-
-from wsgistate import *
+from wsgistate import simple, memory, db, file, cache, memcached, session
 
 
 class TestWsgiState(unittest.TestCase):
@@ -51,7 +46,8 @@ class TestWsgiState(unittest.TestCase):
         session['count'] = count
         environ['count'] = count
         headers = start_response('200 OK', [])
-        if headers: environ['cookie'] = headers[0][1]
+        if headers:
+            environ['cookie'] = headers[0][1]
         return environ
 
     def my_app2(self, environ, start_response):
@@ -97,7 +93,9 @@ class TestWsgiState(unittest.TestCase):
         testcache = simple.SimpleCache()
         testcache.set('test', 'test')
         testcache.set('test2', 'test2')
-        self.assertEqual(sorted(testcache.get_many(('test', 'test2')).values()), ['test', 'test2'])
+        self.assertEqual(
+            sorted(testcache.get_many(('test', 'test2')).values()),
+            ['test', 'test2'])
 
     def test_sc_in_true(self):
         '''Tests in (true) on SimpleCache.'''
@@ -149,7 +147,9 @@ class TestWsgiState(unittest.TestCase):
         testcache = memory.MemoryCache()
         testcache.set('test', 'test')
         testcache.set('test2', 'test2')
-        self.assertEqual(sorted(testcache.get_many(('test', 'test2')).values()), ['test', 'test2'])
+        self.assertEqual(
+            sorted(testcache.get_many(('test', 'test2')).values()),
+            ['test', 'test2'])
 
     def test_mc_in_true(self):
         '''Tests in (true) on MemoryCache.'''
@@ -201,7 +201,9 @@ class TestWsgiState(unittest.TestCase):
         testcache = file.FileCache('test_wsgistate')
         testcache.set('test', 'test')
         testcache.set('test2', 'test2')
-        self.assertEqual(sorted(testcache.get_many(('test', 'test2')).values()), ['test', 'test2'])
+        self.assertEqual(
+            sorted(testcache.get_many(('test', 'test2')).values()),
+            ['test', 'test2'])
 
     def test_fc_in_true(self):
         '''Tests in (true) on FileCache.'''
@@ -255,8 +257,7 @@ class TestWsgiState(unittest.TestCase):
         testcache.set('test2', 'test2')
         self.assertEqual(
             sorted(testcache.get_many(('test', 'test2'))),
-                ['test', 'test2']
-        )
+            ['test', 'test2'])
 
     def test_db_in_true(self):
         '''Tests in (true) on DbCache.'''
@@ -308,7 +309,9 @@ class TestWsgiState(unittest.TestCase):
         testcache = memcached.MemCached('localhost')
         testcache.set('test', 'test')
         testcache.set('test2', 'test2')
-        self.assertEqual(sorted(testcache.get_many(('test', 'test2')).values()), ['test', 'test2'])
+        self.assertEqual(
+            sorted(testcache.get_many(('test', 'test2')).values()),
+            ['test', 'test2'])
 
     def test_mcd_in_true(self):
         '''Tests in (true) on MemCache.'''
@@ -335,9 +338,9 @@ class TestWsgiState(unittest.TestCase):
         testcache = session.SessionCache(testc)
         csession = session.CookieSession(self.my_app, testcache)
         cookie = csession({}, self.dummy_sr)['cookie']
-        csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        csession({'HTTP_COOKIE': cookie}, self.dummy_sr)
+        csession({'HTTP_COOKIE': cookie}, self.dummy_sr)
+        result = csession({'HTTP_COOKIE': cookie}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_cookiesession_mc(self):
@@ -346,9 +349,9 @@ class TestWsgiState(unittest.TestCase):
         testcache = session.SessionCache(testc)
         csession = session.CookieSession(self.my_app, testcache)
         cookie = csession({}, self.dummy_sr)['cookie']
-        csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        csession({'HTTP_COOKIE': cookie}, self.dummy_sr)
+        csession({'HTTP_COOKIE': cookie}, self.dummy_sr)
+        result = csession({'HTTP_COOKIE': cookie}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_cookiesession_fc(self):
@@ -357,9 +360,9 @@ class TestWsgiState(unittest.TestCase):
         testcache = session.SessionCache(testc)
         csession = session.CookieSession(self.my_app, testcache)
         cookie = csession({}, self.dummy_sr)['cookie']
-        csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        csession({'HTTP_COOKIE': cookie}, self.dummy_sr)
+        csession({'HTTP_COOKIE': cookie}, self.dummy_sr)
+        result = csession({'HTTP_COOKIE': cookie}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_cookiesession_dc(self):
@@ -368,9 +371,9 @@ class TestWsgiState(unittest.TestCase):
         testcache = session.SessionCache(testc)
         csession = session.CookieSession(self.my_app, testcache)
         cookie = csession({}, self.dummy_sr)['cookie']
-        csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        csession({'HTTP_COOKIE': cookie}, self.dummy_sr)
+        csession({'HTTP_COOKIE': cookie}, self.dummy_sr)
+        result = csession({'HTTP_COOKIE': cookie}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_cookiesession_mdc(self):
@@ -379,9 +382,9 @@ class TestWsgiState(unittest.TestCase):
         testcache = session.SessionCache(testc)
         csession = session.CookieSession(self.my_app, testcache)
         cookie = csession({}, self.dummy_sr)['cookie']
-        csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        csession({'HTTP_COOKIE': cookie}, self.dummy_sr)
+        csession({'HTTP_COOKIE': cookie}, self.dummy_sr)
+        result = csession({'HTTP_COOKIE': cookie}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_dec_cookiesession_sc(self):
@@ -393,12 +396,13 @@ class TestWsgiState(unittest.TestCase):
             session['count'] = count
             environ['count'] = count
             headers = start_response('200 OK', [])
-            if headers: environ['cookie'] = headers[0][1]
+            if headers:
+                environ['cookie'] = headers[0][1]
             return environ
         cookie = tapp({}, self.dummy_sr)['cookie']
-        tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        result = tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        tapp({'HTTP_COOKIE': cookie}, self.dummy_sr)
+        tapp({'HTTP_COOKIE': cookie}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE': cookie}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_dec_cookiesession_memc(self):
@@ -410,12 +414,13 @@ class TestWsgiState(unittest.TestCase):
             session['count'] = count
             environ['count'] = count
             headers = start_response('200 OK', [])
-            if headers: environ['cookie'] = headers[0][1]
+            if headers:
+                environ['cookie'] = headers[0][1]
             return environ
         cookie = tapp({}, self.dummy_sr)['cookie']
-        tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        result = tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        tapp({'HTTP_COOKIE': cookie}, self.dummy_sr)
+        tapp({'HTTP_COOKIE': cookie}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE': cookie}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_dec_cookiesession_fc(self):
@@ -427,12 +432,13 @@ class TestWsgiState(unittest.TestCase):
             session['count'] = count
             environ['count'] = count
             headers = start_response('200 OK', [])
-            if headers: environ['cookie'] = headers[0][1]
+            if headers:
+                environ['cookie'] = headers[0][1]
             return environ
         cookie = tapp({}, self.dummy_sr)['cookie']
-        tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        result = tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        tapp({'HTTP_COOKIE': cookie}, self.dummy_sr)
+        tapp({'HTTP_COOKIE': cookie}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE': cookie}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_dec_cookiesession_db(self):
@@ -444,12 +450,13 @@ class TestWsgiState(unittest.TestCase):
             session['count'] = count
             environ['count'] = count
             headers = start_response('200 OK', [])
-            if headers: environ['cookie'] = headers[0][1]
+            if headers:
+                environ['cookie'] = headers[0][1]
             return environ
         cookie = tapp({}, self.dummy_sr)['cookie']
-        tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        result = tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        tapp({'HTTP_COOKIE': cookie}, self.dummy_sr)
+        tapp({'HTTP_COOKIE': cookie}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE': cookie}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_dec_cookiesession_mc(self):
@@ -461,12 +468,13 @@ class TestWsgiState(unittest.TestCase):
             session['count'] = count
             environ['count'] = count
             headers = start_response('200 OK', [])
-            if headers: environ['cookie'] = headers[0][1]
+            if headers:
+                environ['cookie'] = headers[0][1]
             return environ
         cookie = tapp({}, self.dummy_sr)['cookie']
-        tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
-        result = tapp({'HTTP_COOKIE':cookie}, self.dummy_sr)
+        tapp({'HTTP_COOKIE': cookie}, self.dummy_sr)
+        tapp({'HTTP_COOKIE': cookie}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE': cookie}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_random_cookiesession_sc(self):
@@ -475,9 +483,9 @@ class TestWsgiState(unittest.TestCase):
         testcache = session.SessionCache(testc, random=True)
         csession = session.CookieSession(self.my_app, testcache)
         result = csession({}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        result = csession({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
+        result = csession({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
+        result = csession({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_random_cookiesession_mc(self):
@@ -486,9 +494,9 @@ class TestWsgiState(unittest.TestCase):
         testcache = session.SessionCache(testc, random=True)
         csession = session.CookieSession(self.my_app, testcache)
         result = csession({}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        result = csession({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
+        result = csession({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
+        result = csession({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_random_cookiesession_fc(self):
@@ -497,9 +505,9 @@ class TestWsgiState(unittest.TestCase):
         testcache = session.SessionCache(testc, random=True)
         csession = session.CookieSession(self.my_app, testcache)
         result = csession({}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        result = csession({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
+        result = csession({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
+        result = csession({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_random_cookiesession_dc(self):
@@ -508,9 +516,9 @@ class TestWsgiState(unittest.TestCase):
         testcache = session.SessionCache(testc, random=True)
         csession = session.CookieSession(self.my_app, testcache)
         result = csession({}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        result = csession({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
+        result = csession({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
+        result = csession({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_random_cookiesession_mdc(self):
@@ -519,9 +527,9 @@ class TestWsgiState(unittest.TestCase):
         testcache = session.SessionCache(testc, random=True)
         csession = session.CookieSession(self.my_app, testcache)
         result = csession({}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
-        result = csession({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        result = csession({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
+        result = csession({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
+        result = csession({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_dec_random_cookiesession_sc(self):
@@ -533,12 +541,13 @@ class TestWsgiState(unittest.TestCase):
             session['count'] = count
             environ['count'] = count
             headers = start_response('200 OK', [])
-            if headers: environ['cookie'] = headers[0][1]
+            if headers:
+                environ['cookie'] = headers[0][1]
             return environ
         result = tapp({}, self.dummy_sr)
-        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
-        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
-        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_dec_random_cookiesession_mc(self):
@@ -550,12 +559,13 @@ class TestWsgiState(unittest.TestCase):
             session['count'] = count
             environ['count'] = count
             headers = start_response('200 OK', [])
-            if headers: environ['cookie'] = headers[0][1]
+            if headers:
+                environ['cookie'] = headers[0][1]
             return environ
         result = tapp({}, self.dummy_sr)
-        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
-        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
-        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_dec_random_cookiesession_fc(self):
@@ -567,12 +577,13 @@ class TestWsgiState(unittest.TestCase):
             session['count'] = count
             environ['count'] = count
             headers = start_response('200 OK', [])
-            if headers: environ['cookie'] = headers[0][1]
+            if headers:
+                environ['cookie'] = headers[0][1]
             return environ
         result = tapp({}, self.dummy_sr)
-        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
-        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
-        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_dec_random_cookiesession_db(self):
@@ -584,12 +595,13 @@ class TestWsgiState(unittest.TestCase):
             session['count'] = count
             environ['count'] = count
             headers = start_response('200 OK', [])
-            if headers: environ['cookie'] = headers[0][1]
+            if headers:
+                environ['cookie'] = headers[0][1]
             return environ
         result = tapp({}, self.dummy_sr)
-        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
-        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
-        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_dec_random_cookiesession_mcd(self):
@@ -601,12 +613,13 @@ class TestWsgiState(unittest.TestCase):
             session['count'] = count
             environ['count'] = count
             headers = start_response('200 OK', [])
-            if headers: environ['cookie'] = headers[0][1]
+            if headers:
+                environ['cookie'] = headers[0][1]
             return environ
         result = tapp({}, self.dummy_sr)
-        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
-        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
-        result = tapp({'HTTP_COOKIE':result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
+        result = tapp({'HTTP_COOKIE': result['cookie']}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_urlsession_sc(self):
@@ -616,10 +629,10 @@ class TestWsgiState(unittest.TestCase):
         csession = session.URLSession(self.my_app2, testcache)
         url = csession({}, self.dummy_sr)[0].split()[-1]
         query = urlparse.urlsplit(url)[3]
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        result = csession({'QUERY_STRING':query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        result = csession({'QUERY_STRING': query}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_urlsession_mc(self):
@@ -629,10 +642,10 @@ class TestWsgiState(unittest.TestCase):
         csession = session.URLSession(self.my_app2, testcache)
         url = csession({}, self.dummy_sr)[0].split()[-1]
         query = urlparse.urlsplit(url)[3]
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        result = csession({'QUERY_STRING':query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        result = csession({'QUERY_STRING': query}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_urlsession_fc(self):
@@ -642,10 +655,10 @@ class TestWsgiState(unittest.TestCase):
         csession = session.URLSession(self.my_app2, testcache)
         url = csession({}, self.dummy_sr)[0].split()[-1]
         query = urlparse.urlsplit(url)[3]
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        result = csession({'QUERY_STRING':query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        result = csession({'QUERY_STRING': query}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_urlsession_dc(self):
@@ -655,10 +668,10 @@ class TestWsgiState(unittest.TestCase):
         csession = session.URLSession(self.my_app2, testcache)
         url = csession({}, self.dummy_sr)[0].split()[-1]
         query = urlparse.urlsplit(url)[3]
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        result = csession({'QUERY_STRING':query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        result = csession({'QUERY_STRING': query}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_urlsession_mdc(self):
@@ -668,11 +681,11 @@ class TestWsgiState(unittest.TestCase):
         csession = session.URLSession(self.my_app2, testcache)
         url = csession({}, self.dummy_sr)[0].split()[-1]
         query = urlparse.urlsplit(url)[3]
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        result = csession({'QUERY_STRING':query}, self.dummy_sr)
-        self.assertEqual(result['count'], 4)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        result = csession({'QUERY_STRING': query}, self.dummy_sr)
+        self.assertEqual(result[0]['count'], 4)
 
     def test_dec_urlsession_sc(self):
         '''Tests URL encoded sessions with SimpleCache.'''
@@ -683,14 +696,15 @@ class TestWsgiState(unittest.TestCase):
             session['count'] = count
             environ['count'] = count
             headers = start_response('200 OK', [])
-            if headers: environ['cookie'] = headers[0][1]
+            if headers:
+                environ['cookie'] = headers[0][1]
             return environ
         url = csession({}, self.dummy_sr)[0].split()[-1]
         query = urlparse.urlsplit(url)[3]
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        result = csession({'QUERY_STRING':query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        result = csession({'QUERY_STRING': query}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_dec_urlsession_mc(self):
@@ -702,14 +716,15 @@ class TestWsgiState(unittest.TestCase):
             session['count'] = count
             environ['count'] = count
             headers = start_response('200 OK', [])
-            if headers: environ['cookie'] = headers[0][1]
+            if headers:
+                environ['cookie'] = headers[0][1]
             return environ
         url = csession({}, self.dummy_sr)[0].split()[-1]
         query = urlparse.urlsplit(url)[3]
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        result = csession({'QUERY_STRING':query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        result = csession({'QUERY_STRING': query}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_dec_urlsession_fc(self):
@@ -721,14 +736,15 @@ class TestWsgiState(unittest.TestCase):
             session['count'] = count
             environ['count'] = count
             headers = start_response('200 OK', [])
-            if headers: environ['cookie'] = headers[0][1]
+            if headers:
+                environ['cookie'] = headers[0][1]
             return environ
         url = csession({}, self.dummy_sr)[0].split()[-1]
         query = urlparse.urlsplit(url)[3]
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        result = csession({'QUERY_STRING':query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        result = csession({'QUERY_STRING': query}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_dec_urlsession_dc(self):
@@ -740,14 +756,15 @@ class TestWsgiState(unittest.TestCase):
             session['count'] = count
             environ['count'] = count
             headers = start_response('200 OK', [])
-            if headers: environ['cookie'] = headers[0][1]
+            if headers:
+                environ['cookie'] = headers[0][1]
             return environ
         url = csession({}, self.dummy_sr)[0].split()[-1]
         query = urlparse.urlsplit(url)[3]
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        result = csession({'QUERY_STRING':query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        result = csession({'QUERY_STRING': query}, self.dummy_sr)
         self.assertEqual(result['count'], 4)
 
     def test_dec_urlsession_mdc(self):
@@ -759,20 +776,21 @@ class TestWsgiState(unittest.TestCase):
             session['count'] = count
             environ['count'] = count
             headers = start_response('200 OK', [])
-            if headers: environ['cookie'] = headers[0][1]
+            if headers:
+                environ['cookie'] = headers[0][1]
             return environ
         url = csession({}, self.dummy_sr)[0].split()[-1]
         query = urlparse.urlsplit(url)[3]
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        csession({'QUERY_STRING':query}, self.dummy_sr)
-        result = csession({'QUERY_STRING':query}, self.dummy_sr)
-        self.assertEqual(result['count'], 4)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        csession({'QUERY_STRING': query}, self.dummy_sr)
+        result = csession({'QUERY_STRING': query}, self.dummy_sr)
+        self.assertEqual(result[0]['count'], 4)
 
     def test_wsgimemoize_default_sc(self):
         '''Tests default memoizing with SimpleCache decorator.'''
         testc = simple.SimpleCache()
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'GET'}
         cacheapp = cache.WsgiMemoize(self.my_app3, testc)
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
@@ -781,7 +799,7 @@ class TestWsgiState(unittest.TestCase):
     def test_wsgimemoize_default_mc(self):
         '''Tests default memoizing with MemoryCache.'''
         testc = memory.MemoryCache()
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'GET'}
         cacheapp = cache.WsgiMemoize(self.my_app3, testc)
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
@@ -790,7 +808,7 @@ class TestWsgiState(unittest.TestCase):
     def test_wsgimemoize_default_fc(self):
         '''Tests default memoizing with FileCache.'''
         testc = file.FileCache('test_wsgistate')
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'GET'}
         cacheapp = cache.WsgiMemoize(self.my_app3, testc)
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
@@ -799,7 +817,7 @@ class TestWsgiState(unittest.TestCase):
     def test_wsgimemoize_default_db(self):
         '''Tests default memoizing with DbCache.'''
         testc = db.DbCache('sqlite://')
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'GET'}
         cacheapp = cache.WsgiMemoize(self.my_app3, testc)
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
@@ -808,7 +826,7 @@ class TestWsgiState(unittest.TestCase):
     def test_wsgimemoize_default_mcd(self):
         '''Tests default memoizing with MemCached.'''
         testc = memcached.MemCached('localhost')
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'GET'}
         cacheapp = cache.WsgiMemoize(self.my_app3, testc)
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
@@ -820,7 +838,7 @@ class TestWsgiState(unittest.TestCase):
         def cacheapp(environ, start_response):
             start_response('200 OK', [])
             return ['passed']
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'GET'}
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
         self.assertEqual(result1 == result2, True)
@@ -831,7 +849,7 @@ class TestWsgiState(unittest.TestCase):
         def cacheapp(environ, start_response):
             start_response('200 OK', [])
             return ['passed']
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'GET'}
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
         self.assertEqual(result1 == result2, True)
@@ -842,7 +860,7 @@ class TestWsgiState(unittest.TestCase):
         def cacheapp(environ, start_response):
             start_response('200 OK', [])
             return ['passed']
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'GET'}
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
         self.assertEqual(result1 == result2, True)
@@ -853,7 +871,7 @@ class TestWsgiState(unittest.TestCase):
         def cacheapp(environ, start_response):
             start_response('200 OK', [])
             return ['passed']
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'GET'}
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
         self.assertEqual(result1 == result2, True)
@@ -864,33 +882,38 @@ class TestWsgiState(unittest.TestCase):
         def cacheapp(environ, start_response):
             start_response('200 OK', [])
             return ['passed']
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'GET'}
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
         self.assertEqual(result1 == result2, True)
 
     def test_wsgimemoize_method_sc(self):
-        '''Tests memoizing with HTTP method as part of the key with SimpleCache.'''
+        '''Tests memoizing with HTTP method as part of the key with
+        SimpleCache.
+        '''
         testc = simple.SimpleCache()
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'GET'}
         cacheapp = cache.WsgiMemoize(self.my_app3, testc, key_methods=True)
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
         self.assertEqual(result1 == result2, True)
 
     def test_wsgimemoize_method_mc(self):
-        '''Tests memoizing with HTTP method as part of the key with MemoryCache.'''
+        '''Tests memoizing with HTTP method as part of the key with
+        MemoryCache.
+        '''
         testc = memory.MemoryCache()
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'GET'}
         cacheapp = cache.WsgiMemoize(self.my_app3, testc, key_methods=True)
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
         self.assertEqual(result1 == result2, True)
 
     def test_wsgimemoize_method_fc(self):
-        '''Tests memoizing with HTTP method as part of the key with FileCache.'''
+        '''Tests memoizing with HTTP method as part of the key with
+        FileCache.'''
         testc = file.FileCache('test_wsgistate')
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'GET'}
         cacheapp = cache.WsgiMemoize(self.my_app3, testc, key_methods=True)
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
@@ -899,36 +922,43 @@ class TestWsgiState(unittest.TestCase):
     def test_wsgimemoize_method_db(self):
         '''Tests memoizing with HTTP method as part of the key with DbCache.'''
         testc = db.DbCache('sqlite://')
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'GET'}
         cacheapp = cache.WsgiMemoize(self.my_app3, testc, key_methods=True)
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
         self.assertEqual(result1 == result2, True)
 
     def test_wsgimemoize_method_mcd(self):
-        '''Tests memoizing with HTTP method as part of the key with MemCached.'''
+        '''Tests memoizing with HTTP method as part of the key with
+        MemCached.'''
         testc = memcached.MemCached('localhost')
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET'}
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'GET'}
         cacheapp = cache.WsgiMemoize(self.my_app3, testc, key_methods=True)
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
         self.assertEqual(result1 == result2, True)
 
     def test_wsgimemoize_user_info_sc(self):
-        '''Tests memoizing with user info as part of the key with SimpleCache.'''
+        '''Tests memoizing with user info as part of the key with
+        SimpleCache.
+        '''
         testc = simple.SimpleCache()
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET',
-        'wsgi.input':StringIO.StringIO('num=12121&str1=test&state=NV&Submit=Submit')}
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'GET',
+               'wsgi.input': StringIO.StringIO(
+                   'num=12121&str1=test&state=NV&Submit=Submit')}
         cacheapp = cache.WsgiMemoize(self.my_app3, testc, key_user_info=True)
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
         self.assertEqual(result1 == result2, True)
 
     def test_wsgimemoize_user_info_mc(self):
-        '''Tests memoizing with user info as part of the key with MemoryCache.'''
+        '''Tests memoizing with user info as part of the key with
+        MemoryCache.
+        '''
         testc = memory.MemoryCache()
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET',
-        'wsgi.input':StringIO.StringIO('num=12121&str1=test&state=NV&Submit=Submit')}
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'GET',
+               'wsgi.input': StringIO.StringIO(
+                   'num=12121&str1=test&state=NV&Submit=Submit')}
         cacheapp = cache.WsgiMemoize(self.my_app3, testc, key_user_info=True)
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
@@ -937,8 +967,9 @@ class TestWsgiState(unittest.TestCase):
     def test_wsgimemoize_user_info_fc(self):
         '''Tests memoizing with user info as part of the key with FileCache.'''
         testc = file.FileCache('test_wsgistate')
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET',
-        'wsgi.input':StringIO.StringIO('num=12121&str1=test&state=NV&Submit=Submit')}
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'GET',
+               'wsgi.input': StringIO.StringIO(
+                   'num=12121&str1=test&state=NV&Submit=Submit')}
         cacheapp = cache.WsgiMemoize(self.my_app3, testc, key_user_info=True)
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
@@ -947,8 +978,9 @@ class TestWsgiState(unittest.TestCase):
     def test_wsgimemoize_user_info_db(self):
         '''Tests memoizing with user info as part of the key with DbCache.'''
         testc = db.DbCache('sqlite://')
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET',
-        'wsgi.input':StringIO.StringIO('num=12121&str1=test&state=NV&Submit=Submit')}
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'GET',
+               'wsgi.input': StringIO.StringIO(
+                   'num=12121&str1=test&state=NV&Submit=Submit')}
         cacheapp = cache.WsgiMemoize(self.my_app3, testc, key_user_info=True)
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
@@ -957,19 +989,24 @@ class TestWsgiState(unittest.TestCase):
     def test_wsgimemoize_user_info_mcd(self):
         '''Tests memoizing with user info as part of the key with MemCached.'''
         testc = memcached.MemCached('localhost')
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'GET',
-        'wsgi.input':StringIO.StringIO('num=12121&str1=test&state=NV&Submit=Submit')}
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'GET',
+               'wsgi.input': StringIO.StringIO(
+                   'num=12121&str1=test&state=NV&Submit=Submit')}
         cacheapp = cache.WsgiMemoize(self.my_app3, testc, key_user_info=True)
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
         self.assertEqual(result1 == result2, True)
 
     def test_wsgimemoize_allowed_methods(self):
-        '''Tests memoizing with HTTP method as part of the key with MemCached.'''
+        '''Tests memoizing with HTTP method as part of the key with
+        MemCached.
+        '''
         testc = simple.SimpleCache()
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'POST',
-        'wsgi.input':StringIO.StringIO('num=12121&str1=test&state=NV&Submit=Submit')}
-        cacheapp = cache.WsgiMemoize(self.my_app3, testc, allowed_methods=set(['POST']))
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'POST',
+               'wsgi.input': StringIO.StringIO(
+                   'num=12121&str1=test&state=NV&Submit=Submit')}
+        cacheapp = cache.WsgiMemoize(
+            self.my_app3, testc, allowed_methods=set(['POST']))
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
         self.assertEqual(result1 == result2, True)
@@ -977,8 +1014,9 @@ class TestWsgiState(unittest.TestCase):
     def test_wsgimemoize_not_allowed_methods(self):
         '''Tests memoizing with an unallowed HTTP method.'''
         testc = simple.SimpleCache()
-        env = {'PATH_INFO':'/', 'REQUEST_METHOD':'POST',
-        'wsgi.input':StringIO.StringIO('num=12121&str1=test&state=NV&Submit=Submit')}
+        env = {'PATH_INFO': '/', 'REQUEST_METHOD': 'POST',
+               'wsgi.input': StringIO.StringIO(
+                   'num=12121&str1=test&state=NV&Submit=Submit')}
         cacheapp = cache.WsgiMemoize(self.my_app3, testc)
         result1 = cacheapp(env, self.dummy_sr)
         result2 = cacheapp(env, self.dummy_sr)
@@ -989,9 +1027,10 @@ class TestWsgiState(unittest.TestCase):
         @cache.public
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers
+            if headers:
+                environ['headers'] = headers
             return environ
-        result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
+        result = dict(app({'REQUEST_METHOD': 'GET'}, self.dummy_sr)['headers'])
         self.assertEqual(result['Cache-Control'], 'public')
 
     def test_private(self):
@@ -999,9 +1038,10 @@ class TestWsgiState(unittest.TestCase):
         @cache.private
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers
+            if headers:
+                environ['headers'] = headers
             return environ
-        result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
+        result = dict(app({'REQUEST_METHOD': 'GET'}, self.dummy_sr)['headers'])
         self.assertEqual(result['Cache-Control'], 'private')
 
     def test_nocache(self):
@@ -1009,9 +1049,10 @@ class TestWsgiState(unittest.TestCase):
         @cache.nocache
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers
+            if headers:
+                environ['headers'] = headers
             return environ
-        result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
+        result = dict(app({'REQUEST_METHOD': 'GET'}, self.dummy_sr)['headers'])
         self.assertEqual(result['Cache-Control'], 'no-cache')
 
     def test_nostore(self):
@@ -1019,9 +1060,10 @@ class TestWsgiState(unittest.TestCase):
         @cache.nostore
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers
+            if headers:
+                environ['headers'] = headers
             return environ
-        result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
+        result = dict(app({'REQUEST_METHOD': 'GET'}, self.dummy_sr)['headers'])
         self.assertEqual(result['Cache-Control'], 'no-store')
 
     def test_notransform(self):
@@ -1029,9 +1071,10 @@ class TestWsgiState(unittest.TestCase):
         @cache.notransform
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers
+            if headers:
+                environ['headers'] = headers
             return environ
-        result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
+        result = dict(app({'REQUEST_METHOD': 'GET'}, self.dummy_sr)['headers'])
         self.assertEqual(result['Cache-Control'], 'no-transform')
 
     def test_revalidate(self):
@@ -1039,9 +1082,10 @@ class TestWsgiState(unittest.TestCase):
         @cache.revalidate
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers
+            if headers:
+                environ['headers'] = headers
             return environ
-        result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
+        result = dict(app({'REQUEST_METHOD': 'GET'}, self.dummy_sr)['headers'])
         self.assertEqual(result['Cache-Control'], 'must-revalidate')
 
     def test_proxyrevalidate(self):
@@ -1049,9 +1093,10 @@ class TestWsgiState(unittest.TestCase):
         @cache.proxyrevalidate
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers
+            if headers:
+                environ['headers'] = headers
             return environ
-        result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
+        result = dict(app({'REQUEST_METHOD': 'GET'}, self.dummy_sr)['headers'])
         self.assertEqual(result['Cache-Control'], 'proxy-revalidate')
 
     def test_maxage(self):
@@ -1059,9 +1104,10 @@ class TestWsgiState(unittest.TestCase):
         @cache.maxage(30)
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers
+            if headers:
+                environ['headers'] = headers
             return environ
-        result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
+        result = dict(app({'REQUEST_METHOD': 'GET'}, self.dummy_sr)['headers'])
         self.assertEqual(result['Cache-Control'], 'max-age=30')
 
     def test_smaxage(self):
@@ -1069,9 +1115,10 @@ class TestWsgiState(unittest.TestCase):
         @cache.smaxage(30)
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers
+            if headers:
+                environ['headers'] = headers
             return environ
-        result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
+        result = dict(app({'REQUEST_METHOD': 'GET'}, self.dummy_sr)['headers'])
         self.assertEqual(result['Cache-Control'], 's-maxage=30')
 
     def test_vary(self):
@@ -1079,9 +1126,10 @@ class TestWsgiState(unittest.TestCase):
         @cache.vary(['Content-type'])
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers
+            if headers:
+                environ['headers'] = headers
             return environ
-        result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
+        result = dict(app({'REQUEST_METHOD': 'GET'}, self.dummy_sr)['headers'])
         self.assertEqual(result['Vary'], 'Content-type')
 
     def test_modified(self):
@@ -1089,9 +1137,10 @@ class TestWsgiState(unittest.TestCase):
         @cache.modified(30)
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers
+            if headers:
+                environ['headers'] = headers
             return environ
-        result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
+        result = dict(app({'REQUEST_METHOD': 'GET'}, self.dummy_sr)['headers'])
         self.assertEqual('Modified' in result, True)
 
     def test_cachecontrol_combo(self):
@@ -1100,9 +1149,10 @@ class TestWsgiState(unittest.TestCase):
         @cache.private
         def app(environ, start_response):
             headers = start_response('200 OK', [])
-            if headers: environ['headers'] = headers
+            if headers:
+                environ['headers'] = headers
             return environ
-        result = dict(app({'REQUEST_METHOD':'GET'}, self.dummy_sr)['headers'])
+        result = dict(app({'REQUEST_METHOD': 'GET'}, self.dummy_sr)['headers'])
         self.assertEqual(result['Cache-Control'], 's-maxage=30, private')
 
     'modified'
@@ -1111,4 +1161,5 @@ if __name__ == '__main__':
     unittest.main()
     try:
         os.rmdir('test_wsgistate')
-    except IOError: pass
+    except IOError:
+        pass

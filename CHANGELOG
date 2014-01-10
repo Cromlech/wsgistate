@@ -1,9 +1,17 @@
 Changes between 0.4 and 0.4.1
 
-- only caches explicitly declared HTTP methods (Roberto De Alemeida)
-- non-destructively consumes 'wsgi.input' (Roberto De Alemeida)
+- Only caches explicitly declared HTTP methods (Roberto De Alemeida)
+- Non-destructively consumes 'wsgi.input' (Roberto De Alemeida)
 
 Changes between 0.4.1 and 0.4.2
 
-- update to work with SQLAlchemy 0.4.x
-- support for Paste Deploy
+- Update to work with SQLAlchemy 0.4.x
+- Support for Paste Deploy
+
+Changes between 0.4.2 and 0.4.3
+
+- We made sure `wsgistate` uses a correct version of `memcache` (>= 1.50).
+  Versions below 1.50 do have a bug regarding the port declaration.
+- The syntax has been reviewed to match the pep8 recommandations.
+- Useless imports have been removed
+- Urlsession tests have been fixed partially

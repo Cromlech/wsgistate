@@ -26,20 +26,25 @@
 
 '''setup - setuptools based setup for wsgistate.'''
 
-import ez_setup
-ez_setup.use_setuptools()
+try:
+    import ez_setup
+    ez_setup.use_setuptools()
+except ImportError:
+    pass
 
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
 
+
 setup(
     name='wsgistate',
-    version='0.4.2',
+    version='0.4.3',
     description='''WSGI session and caching middleware.''',
-    long_description='''Session (flup-compatible), caching, memoizing, and HTTP cache control
-middleware for WSGI. Supports memory, filesystem, database, and memcached based backends.
+    long_description='''Session (flup-compatible), caching, memoizing,
+and HTTP cache control middleware for WSGI. Supports memory, filesystem,
+database, and memcached based backends.
 
 # Simple memoization example:
 
@@ -75,9 +80,9 @@ if __name__ == '__main__':
     author_email='lcrees@gmail.com',
     url='http://pypi.python.org/pypi/wsgistate/',
     license='BSD',
-    packages = ['wsgistate', 'wsgistate.tests'],
+    packages=['wsgistate', 'wsgistate.tests'],
     test_suite='wsgistate.tests',
-    zip_safe = False,
+    zip_safe=False,
     keywords='WSGI session caching persistence memoizing HTTP Web',
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -88,7 +93,7 @@ if __name__ == '__main__':
         'Programming Language :: Python',
         'Topic :: Internet :: WWW/HTTP :: WSGI :: Middleware',
     ],
-    install_requires = ['SQLAlchemy>0.3', 'python-memcached'],
+    install_requires=['SQLAlchemy>0.3', 'python-memcached>=1.50'],
     entry_points='''
     [paste.filter_factory]
     file_memo=wsgistate.file:filememo_deploy
