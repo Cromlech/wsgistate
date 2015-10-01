@@ -40,7 +40,7 @@ except ImportError:
 
 setup(
     name='wsgistate',
-    version='0.4.3',
+    version='0.5',
     description='''WSGI session and caching middleware.''',
     long_description='''Session (flup-compatible), caching, memoizing,
 and HTTP cache control middleware for WSGI. Supports memory, filesystem,

@@ -137,7 +137,8 @@ class FileCache(SimpleCache):
         @param default Default value (default: None)
         '''
         try:
-            exp, value = pickle.load(open(self._key_to_file(key), 'rb'))
+            with open(self._key_to_file(key), 'rb') as fd:
+                exp, value = pickle.load(fd)
             # Remove item if time has expired.
             if exp < time.time():
                 self.delete(key)
@@ -157,8 +158,8 @@ class FileCache(SimpleCache):
             self._cull()
         try:
             fname = self._key_to_file(key)
-            pickle.dump((time.time() + self.timeout, value),
-                        open(fname, 'wb'), 2)
+            with open(fname, 'wb') as fd:
+                pickle.dump((time.time() + self.timeout, value), fd, 2)
         except (IOError, OSError):
             pass
 
