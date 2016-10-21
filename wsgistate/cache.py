@@ -29,8 +29,12 @@
 '''WSGI middleware for caching.'''
 
 import time
-import rfc822
-from StringIO import StringIO
+import email
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 __all__ = ['WsgiMemoize', 'CacheHeader', 'memoize', 'public', 'private',
            'nocache', 'nostore', 'notransform', 'revalidate',
@@ -66,8 +70,8 @@ def expiredate(seconds, value):
     @param value Value for Cache-Control header
     '''
     now = time.time()
-    return {'Cache-Control': value % seconds, 'Date': rfc822.formatdate(now),
-            'Expires': rfc822.formatdate(now + seconds)}
+    return {'Cache-Control': value % seconds, 'Date': email.formatdate(now),
+            'Expires': email.formatdate(now + seconds)}
 
 
 def control(application, value):
@@ -86,7 +90,7 @@ def expire(application, value):
     @param application WSGI application
     @param value 'Cache-Control' value
     '''
-    now = rfc822.formatdate()
+    now = email.formatdate()
     headers = {'Cache-Control': value, 'Date': now, 'Expires': now}
     return CacheHeader(application, headers)
 
@@ -114,7 +118,7 @@ def private(application):
 
 def nocache(application):
     '''Response that a cache can't send without origin server revalidation.'''
-    now = rfc822.formatdate()
+    now = email.formatdate()
     headers = {'Cache-Control': 'no-cache', 'Pragma': 'no-cache', 'Date': now,
                'Expires': now}
     return CacheHeader(application, headers)
@@ -155,7 +159,7 @@ def smaxage(seconds):
 
 def expires(seconds):
     '''Sets the time a response expires from the cache (HTTP 1.0).'''
-    headers = {'Expires': rfc822.formatdate(time.time() + seconds)}
+    headers = {'Expires': email.formatdate(time.time() + seconds)}
 
     def decorator(application):
         return CacheHeader(application, headers)
@@ -177,7 +181,7 @@ def vary(headers):
 
 def modified(seconds=None):
     '''Sets the time a response was modified.'''
-    headers = {'Modified': rfc822.formatdate(seconds)}
+    headers = {'Modified': email.formatdate(seconds)}
 
     def decorator(application):
         return CacheHeader(application, headers)

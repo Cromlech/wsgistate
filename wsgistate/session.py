@@ -31,17 +31,35 @@ import weakref
 import atexit
 import cgi
 import urllib
-import sha
 import random
 import sys
-from Cookie import SimpleCookie
-from urllib import quote
+import hashlib
+import struct
+from wsgistate import synchronized
+
+try:
+    xrange
+except NameError:
+    xrange = range
+
+try:
+    from Cooke import SimpleCookie
+except ImportError:
+    from http.cookies import SimpleCookie
+
+try:
+    from urllib import quote
+except ImportError:
+    from urllib.parse import quote
+    
 try:
     import threading
 except ImportError:
     import dummy_threading as threading
 
-from wsgistate import synchronized
+
+platform_c_maxint = 2 ** (struct.Struct('i').size * 8 - 1) - 1
+
 
 __all__ = ['SessionCache', 'SessionManager', 'CookieSession', 'URLSession',
            'session', 'urlsession']
@@ -83,8 +101,8 @@ class SessionCache(object):
         self.checkedout, self._closed, self.cache = dict(), False, cache
         # Sets if session id is random on every access or not
         self._random = kw.get('random', False)
-        self._secret = ''.join(self.idchars[ord(c) % len(self.idchars)]
-                               for c in os.urandom(self.length))
+        self._secret = ''.join(self.idchars[ord(chr(c)) % len(self.idchars)]
+                                for c in os.urandom(self.length))
         # Ensure shutdown is called.
         atexit.register(_shutdown, weakref.ref(self))
 
@@ -158,9 +176,9 @@ class SessionCache(object):
         'Returns session key that is not being used.'
         sid = None
         for num in xrange(10000):
-            sid = sha.new(
-                str(random.randint(0, sys.maxint - 1)) +
-                str(random.randint(0, sys.maxint - 1)) + self._secret
+            sid = hashlib.new('sha1',
+                bytes(random.randint(0, platform_c_maxint - 1)) +
+                bytes(random.randint(0, platform_c_maxint - 1)) + self._secret.encode('utf-8')
                 ).hexdigest()
             if sid not in self.cache:
                 break

@@ -36,7 +36,11 @@ except ImportError:
 
 import os
 import time
-import urllib
+
+try:
+    from urllib import quote_plus
+except ImportError:
+    from urllib.parse import quote_plus
 
 from wsgistate.simple import SimpleCache
 from wsgistate.cache import WsgiMemoize
@@ -188,4 +192,4 @@ class FileCache(SimpleCache):
 
     def _key_to_file(self, key):
         '''Gives the filesystem path for a key.'''
-        return os.path.join(self._dir, urllib.quote_plus(key))
+        return os.path.join(self._dir, quote_plus(key))
