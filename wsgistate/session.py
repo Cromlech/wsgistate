@@ -164,7 +164,7 @@ class SessionCache(object):
         '''Clean up outstanding sessions.'''
         if not self._closed:
             # Save or delete any sessions that are still out there.
-            for sid, sess in self.checkedout.iteritems():
+            for sid, sess in self.checkedout.items():
                 self.cache.set(sid, sess)
             self.checkedout.clear()
             self.cache._cull()
