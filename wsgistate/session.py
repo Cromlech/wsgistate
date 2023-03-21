@@ -1,3 +1,4 @@
+
 # Copyright (c) 2005 Allan Saddi <allan@saddi.com>
 # Copyright (c) 2005, the Lawrence Journal-World
 # Copyright (c) 2006 L. C. Rees
@@ -43,7 +44,7 @@ except NameError:
     xrange = range
 
 try:
-    from Cooke import SimpleCookie
+    from Cookie import SimpleCookie
 except ImportError:
     from http.cookies import SimpleCookie
 
