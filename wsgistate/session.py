@@ -36,6 +36,7 @@ import random
 import sys
 import hashlib
 import struct
+import secrets
 from wsgistate import synchronized
 
 try:
@@ -52,7 +53,7 @@ try:
     from urllib import quote
 except ImportError:
     from urllib.parse import quote
-    
+
 try:
     import threading
 except ImportError:
@@ -93,17 +94,12 @@ class SessionCache(object):
     checkin(). You must not keep references to sessions outside of a check
     in/check out block. Always obtain a fresh reference.
     '''
-    # Would be nice if len(idchars) were some power of 2.
-    idchars = '-_'.join([string.digits, string.ascii_letters])
-    length = 64
-
     def __init__(self, cache, **kw):
         self._lock = threading.Condition()
         self.checkedout, self._closed, self.cache = dict(), False, cache
         # Sets if session id is random on every access or not
         self._random = kw.get('random', False)
-        self._secret = ''.join(self.idchars[ord(chr(c)) % len(self.idchars)]
-                                for c in os.urandom(self.length))
+        self._secret = secrets.token_urlsafe(64)
         # Ensure shutdown is called.
         atexit.register(_shutdown, weakref.ref(self))
 

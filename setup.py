@@ -93,7 +93,11 @@ if __name__ == '__main__':
         'Programming Language :: Python',
         'Topic :: Internet :: WWW/HTTP :: WSGI :: Middleware',
     ],
-    install_requires=['SQLAlchemy>0.3', 'python-memcached>=1.50'],
+    install_requires=[
+        'SQLAlchemy>0.3',
+        'python-memcached>=1.50',
+        'python2-secrets'
+    ],
     entry_points='''
     [paste.filter_factory]
     file_memo=wsgistate.file:filememo_deploy
